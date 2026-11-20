@@ -75,6 +75,24 @@ details.fold > summary::before, details.more > summary::before { content: ""; wi
 details.fold[open] > summary::before, details.more[open] > summary::before { transform: rotate(45deg); }
 details.fold > summary:focus-visible, details.more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 details.fold[open] > summary { margin-bottom: 6px; }
+.tools { display: grid; gap: 18px; }
+.tools h3 { margin: 0 0 6px; }
+input.n { width: 4.5em; }
+.warn { color: var(--warn); }
+.layerpick .lp { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+.layerpick details.more { display: inline-block; }
+.layerpick details.more[open] select { margin-left: 2px; }
+.sweepchart { width: 100%; max-width: 760px; height: auto; display: block; }
+.sweepchart .sc-band { fill: var(--accent); opacity: .14; }
+.sweepchart .sc-grid { stroke: var(--line); stroke-width: 1; }
+.sweepchart .sc-axis { stroke: var(--muted); stroke-width: 1; }
+.sweepchart .sc-target { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.sweepchart .sc-fab { stroke: var(--warn); stroke-width: 1.2; stroke-dasharray: 2 3; }
+.sweepchart .sc-line { stroke: var(--accent); stroke-width: 2; }
+.sweepchart .sc-dot { fill: var(--accent); }
+.sweepchart .sc-cross { stroke: var(--muted); stroke-width: 1; }
+.sweepchart .sc-tick, .sweepchart .sc-label { fill: var(--muted); font: 11px var(--sans); }
+.sweepchart .sc-read { fill: var(--ink); font: 12px var(--mono); }
 
 /* ---- calculator, results, field plot, cross-section (Task 14) */
 :root {

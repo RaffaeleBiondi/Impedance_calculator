@@ -4,7 +4,7 @@ import type { LineGeom } from '../solver/problem';
 import type { Unit } from '../model/units';
 import { useThemeVersion } from './theme';
 import { topologyLabel } from './topology';
-import { erText, lenText } from './lenText';
+import { erText, lenText, unitSuffix } from './lenText';
 
 /** One horizontal band of the schematic cross-section, top to bottom in stackup order. */
 export type Row =
@@ -70,7 +70,7 @@ function rowHeight(r: Row): number {
     case 'air': return r.open ? 30 : 38;
     case 'mask': return 16;
     case 'trace': return 22;
-    case 'slab': return Math.min(60, Math.max(32, r.t * 160));
+    case 'slab': return Math.min(60, Math.max(40, r.t * 160));
   }
 }
 
@@ -116,11 +116,13 @@ export function CrossSectionDiagram({ xs, line, names, unit }: Props) {
 
     // dimension lines, on the base side (W, S and G are base widths)
     const dimY = baseAtBottom ? yBase + 9 : yBase - 9;
-    const txtY = baseAtBottom ? yBase + 22 : yBase - 15;
+    // labels alternate between two text rows so narrow neighbouring spans do not collide
+    const txtY = (k: number) => (baseAtBottom ? yBase + 20 + 11 * (k % 2) : yBase - 20 - 11 * (k % 2));
+    const num = (v: number) => lenText(v, unit).replace(/ \S+$/, ''); // the unit is in the caption
     const dims: { x0: number; x1: number; text: string }[] = [];
-    dims.push({ x0: X(diff ? Sg / 2 : -xb), x1: X(xb), text: `W ${lenText(W, unit)}` });
-    if (diff) dims.push({ x0: X(-Sg / 2), x1: X(Sg / 2), text: `S ${lenText(Sg, unit)}` });
-    if (cpw) dims.push({ x0: X(xb), x1: X(xb + G), text: `G ${lenText(G, unit)}` });
+    if (diff) dims.push({ x0: X(-Sg / 2), x1: X(Sg / 2), text: `S ${num(Sg)}` });
+    dims.push({ x0: X(diff ? Sg / 2 : -xb), x1: X(xb), text: `W ${num(W)}` });
+    if (cpw) dims.push({ x0: X(xb), x1: X(xb + G), text: `G ${num(G)}` });
 
     let tone = 0;
     return (
@@ -180,7 +182,7 @@ export function CrossSectionDiagram({ xs, line, names, unit }: Props) {
           <g key={`d${k}`} className="xs-dim">
             <line x1={d.x0} y1={dimY} x2={d.x1} y2={dimY} />
             <path d={`M${d.x0 + 4},${dimY - 3} L${d.x0},${dimY} L${d.x0 + 4},${dimY + 3} M${d.x1 - 4},${dimY - 3} L${d.x1},${dimY} L${d.x1 - 4},${dimY + 3}`} />
-            <text x={(d.x0 + d.x1) / 2} y={txtY} textAnchor="middle" dominantBaseline="central">{d.text}</text>
+            <text x={(d.x0 + d.x1) / 2} y={txtY(k)} textAnchor="middle" dominantBaseline="central">{d.text}</text>
           </g>
         ))}
       </svg>
@@ -193,7 +195,7 @@ export function CrossSectionDiagram({ xs, line, names, unit }: Props) {
     <figure className="xsdiag" aria-label="Cross-section">
       <div className="xs-title">{title}</div>
       {svg}
-      <figcaption className="hint">not to scale</figcaption>
+      <figcaption className="hint">not to scale · {unitSuffix(unit)}</figcaption>
     </figure>
   );
 }

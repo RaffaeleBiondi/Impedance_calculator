@@ -66,4 +66,78 @@ describe('SolverPool', () => {
     await p2;
     pool.dispose();
   });
+
+  it('batch cancel on size 2 with 10 jobs respawns at most 2 workers', async () => {
+    const made: FakeWorker[] = [];
+    const pool = new SolverPool(2, () => { const w = new FakeWorker(false); made.push(w); return w; });
+    const b = pool.runBatch(Array.from({ length: 10 }, (_, i) => job(i)));
+    const p = expect(b.promise).rejects.toBe('cancelled');
+    b.cancel();
+    await p;
+    expect(made.length).toBe(4);
+    expect(made.filter((w) => w.terminated).length).toBe(2);
+    expect(made.slice(2).every((w) => w.received.length === 0)).toBe(true);
+    pool.dispose();
+  });
+
+  it('running-job cancel lets a queued job still complete', async () => {
+    const made: FakeWorker[] = [];
+    const pool = new SolverPool(1, () => { const w = new FakeWorker(made.length > 0); made.push(w); return w; });
+    const a = pool.run(job(1));
+    const q = pool.run<number>(job(2));
+    const p = expect(a.promise).rejects.toBe('cancelled');
+    a.cancel();
+    await p;
+    expect(await q.promise).toBe(2);
+    pool.dispose();
+  });
+
+  it('onerror mid-job rejects with the message, respawns, and runs the next queued job', async () => {
+    const made: FakeWorker[] = [];
+    const pool = new SolverPool(1, () => { const w = new FakeWorker(made.length > 0); made.push(w); return w; });
+    const a = pool.run(job(1));
+    const q = pool.run<number>(job(2));
+    const p = expect(a.promise).rejects.toThrow('x');
+    made[0].onerror?.({ message: 'x' });
+    await p;
+    expect(made[0].terminated).toBe(true);
+    expect(made.length).toBe(2);
+    expect(await q.promise).toBe(2);
+    pool.dispose();
+  });
+
+  it('ignores stale onerror events from a replaced worker', async () => {
+    const made: FakeWorker[] = [];
+    const pool = new SolverPool(1, () => { const w = new FakeWorker(made.length > 0); made.push(w); return w; });
+    const a = pool.run(job(1));
+    const p = expect(a.promise).rejects.toBe('cancelled');
+    a.cancel();
+    await p;
+    made[0].onerror?.({ message: 'late' });
+    expect(made.length).toBe(2);
+    expect(made[1].terminated).toBe(false);
+    pool.dispose();
+  });
+
+  it('stops respawning after 3 consecutive load errors and rejects queued jobs', async () => {
+    const made: FakeWorker[] = [];
+    const pool = new SolverPool(1, () => { const w = new FakeWorker(false); made.push(w); return w; });
+    const a = pool.run(job(1));
+    const b = pool.run(job(2));
+    const c = pool.run(job(3));
+    const d = pool.run(job(4));
+    const ps = [
+      expect(a.promise).rejects.toThrow('boot'),
+      expect(b.promise).rejects.toThrow('boot'),
+      expect(c.promise).rejects.toThrow('boot'),
+      expect(d.promise).rejects.toThrow('solver worker failed to start'),
+    ];
+    made[0].onerror?.({ message: 'boot' });
+    made[1].onerror?.({ message: 'boot' });
+    made[2].onerror?.({ message: 'boot' });
+    await Promise.all(ps);
+    expect(made.length).toBe(3);
+    await expect(pool.run(job(5)).promise).rejects.toThrow('solver worker failed to start');
+    pool.dispose();
+  });
 });

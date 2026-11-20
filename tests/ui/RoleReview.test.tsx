@@ -1,15 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import App from '../../src/ui/App';
-
-// jsdom has no Worker: the shared solver pool is replaced by an inert one whose jobs never settle.
-vi.mock('../../src/ui/usePool', () => {
-  const pending = () => ({ promise: new Promise<never>(() => {}), cancel: () => {} });
-  const pool = { run: pending, runBatch: pending, dispose: () => {} };
-  return { usePool: () => pool };
-});
 
 const fx = readFileSync('tests/fixtures/kicad7-4layer.kicad_pcb', 'utf8').replace('(1 "In1.Cu" power)', '(1 "In1.Cu" signal)');
 const role = (name: string) => (screen.getByLabelText(`Role of ${name}`) as HTMLSelectElement).value;

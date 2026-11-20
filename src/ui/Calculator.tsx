@@ -5,31 +5,27 @@ import { coppers } from '../model/stackup';
 import { fromDisplay, toDisplay, type Unit } from '../model/units';
 import type { AnalyzeRequest, AnalyzeResult } from '../solver/engine';
 import type { Job } from '../solver/protocol';
+import type { SynthResult } from '../solver/synthesis';
+import { buildReq } from './reqs';
 import { usePool } from './usePool';
 import { LenInput } from './LenInput';
 import { NumInput } from './NumInput';
 import { Results } from './Results';
 import { unitSuffix } from './lenText';
 
-/** Synthesis result as returned by the worker for findW / findS / compact (src/solver/synthesis.ts). */
-type Synth =
-  | { ok: true; W: number; S?: number; z: number; result: AnalyzeResult; bound?: string; message?: string }
-  | { ok: false; reason: string; zRange?: [number, number]; message: string; detail?: string };
+/** Worker reply for findW / findS (SynthResult) and compact (compactWithinTol adds a message on success). */
+type Synth = SynthResult & { message?: string };
 
 export const DEBOUNCE_MS = 180;
 
 /** Round step per display unit (stored in mm): 0.005 mm, 5 µm, 0.1 mil. */
 export const ROUND_STEP: Record<Unit, number> = { mm: 0.005, um: 0.005, mil: 0.00254 };
 
+/** The calculator's AnalyzeRequest (S only for pairs, G only with coplanar GND). */
 export function buildRequest(s: AppState): AnalyzeRequest {
   const c = s.calc;
-  return {
-    stackup: s.stackup,
-    sel: { layerId: c.layerId, refAbove: c.refAbove, refBelow: c.refBelow },
-    line: { type: c.type, W: c.W, S: c.S, G: c.cpw ? c.G : null, etch: s.stackup.etch.mode === 'trap' },
-    q: c.q,
-    freqGHz: c.freqGHz,
-  };
+  return buildReq(s, { layerId: c.layerId, refAbove: c.refAbove, refBelow: c.refBelow },
+    { type: c.type, W: c.W, S: c.S, G: c.cpw ? c.G : null });
 }
 
 type Line = { W: number; S?: number; G?: number | null };
@@ -125,7 +121,7 @@ export function Calculator() {
           if (res.ok) {
             set(res.S != null && r.line.type === 'diff' ? { W: res.W, S: res.S } : { W: res.W });
             setShown({ result: res.result, line: lineOf(r, res.W, res.S ?? r.line.S) });
-            setMsg({ text: res.message ?? `W ${res.W}`, cls: 'ok' });
+            if (res.message) setMsg({ text: res.message, cls: 'ok' });
           } else {
             setShown(null);
             setMsg({ text: res.message, detail: res.detail, cls: 'bad' });

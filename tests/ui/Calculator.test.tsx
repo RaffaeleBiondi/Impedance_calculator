@@ -41,7 +41,7 @@ describe('Calculator', () => {
     expect(j.op).toBe('analyze');
     if (j.op !== 'analyze') return;
     expect(j.req.sel).toEqual({ layerId: 'cu5', refAbove: 'cu4', refBelow: 'cu6' });
-    expect(j.req.line).toEqual({ type: 'se', W: 0.135, S: 0.2, G: null, etch: false });
+    expect(j.req.line).toEqual({ type: 'se', W: 0.135, S: undefined, G: null, etch: false });
     expect(j.req.q).toBe(2);
   });
 
