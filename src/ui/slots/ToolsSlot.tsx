@@ -1,7 +1,11 @@
+import { Sweep } from '../Sweep';
+import { WidthTable } from '../WidthTable';
+
 export function ToolsSlot() {
   return (
-    <section className="panel" aria-label="Sweep and width table">
-      <h2>Sweep and width table</h2>
+    <section className="panel tools" aria-label="Sweep and width table">
+      <Sweep />
+      <WidthTable />
     </section>
   );
 }
