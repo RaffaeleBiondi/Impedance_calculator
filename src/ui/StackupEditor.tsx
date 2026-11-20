@@ -91,13 +91,13 @@ export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } 
                 {l.kind === 'copper'
                   ? <CopperRow l={l} unit={unit} selected={calc.layerId === l.id} />
                   : <DielectricRow l={l} unit={unit} />}
-                <td className="act">
+                <td className="act"><span className="acts">
                   <button type="button" className="icon" title="Move up" aria-label={`Move ${l.id} up`} disabled={i === 0} onClick={() => dispatch({ type: 'moveLayer', id: l.id, dir: 'up' })}>&uarr;</button>
                   <button type="button" className="icon" title="Move down" aria-label={`Move ${l.id} down`} disabled={i === L.length - 1} onClick={() => dispatch({ type: 'moveLayer', id: l.id, dir: 'down' })}>&darr;</button>
                   <button type="button" className="icon" title="Insert copper after" aria-label={`Insert copper after ${l.id}`} onClick={() => dispatch({ type: 'addLayer', after: l.id, kind: 'copper' })}>+Cu</button>
                   <button type="button" className="icon" title="Insert dielectric after" aria-label={`Insert dielectric after ${l.id}`} onClick={() => dispatch({ type: 'addLayer', after: l.id, kind: 'dielectric' })}>+Di</button>
                   <button type="button" className="icon danger" title="Remove" aria-label={`Remove ${l.id}`} onClick={() => dispatch({ type: 'removeLayer', id: l.id })}>&times;</button>
-                </td>
+                </span></td>
               </tr>
             ))}
           </tbody>
