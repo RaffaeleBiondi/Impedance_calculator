@@ -14,6 +14,13 @@ describe('App shell', () => {
   });
 });
 
+describe('header logo', () => {
+  it('renders the logo image', () => {
+    render(<App />);
+    expect(screen.getByRole('img', { name: 'LordOfTheOhms logo' })).toBeInTheDocument();
+  });
+});
+
 describe('row inputs keep focus', () => {
   it('multi-character typing in name and thickness survives', () => {
     render(<App />);

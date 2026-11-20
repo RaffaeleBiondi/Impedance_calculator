@@ -6,6 +6,8 @@ import { ToolsSlot } from './slots/ToolsSlot';
 import { AssumptionsSlot } from './slots/AssumptionsSlot';
 import { ImportDialog } from './ImportDialog';
 import { ThemeToggle } from './ThemeToggle';
+import logo128 from '../assets/logo-header-128.png';
+import logo256 from '../assets/logo-header-256.png';
 import './theme.css';
 
 function Shell() {
@@ -14,6 +16,7 @@ function Shell() {
   return (
     <div className="app">
       <header className="top">
+        <img className="logo" src={logo128} srcSet={`${logo128} 1x, ${logo256} 2x`} width={40} height={40} alt="LordOfTheOhms logo" />
         <div className="titles">
           <h1>LordOfTheOhms</h1>
           <p>PCB trace impedance calculator. Runs entirely in your browser.</p>
