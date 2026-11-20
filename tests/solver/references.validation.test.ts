@@ -24,6 +24,7 @@ const cases: [string, () => Check, Status][] = [
   ['V11 CPW without ground vs exact conformal map ≤ 0.3 %, dom 1 and 2', v11, 'pass'],
   ['V12a CPW on a finite substrate (~1 %, deviation FD-backed)', v12a, 'deviation-recorded'],
   ['V12b CPWG (~1 %, deviation FD-backed)', v12b, 'deviation-recorded'],
+  ['V14 dielectric loss: exact homogeneous stripline ≤ 0.1 %, microstrip identity ≤ 0.5 %', v14, 'pass'],
   ['V15 solder mask: t = 0 exact, monotonic in t and εr', v15, 'not-validated'],
 ];
 
@@ -39,10 +40,4 @@ describe('reference validations', () => {
       expect(c.row.status).toBe(status);
     }, 120_000);
   }
-  it('V14 dielectric loss: exact stripline and microstrip identity, or not validated before Task 7', () => {
-    const c = v14();
-    console.log(`${c.row.id} [${c.row.status}] ${c.row.result}`);
-    expect(c.failures).toEqual([]);
-    expect(c.row.status === 'pass' || (c.row.status === 'not-validated' && c.row.result === 'pending (Task 7)')).toBe(true);
-  }, 120_000);
 });

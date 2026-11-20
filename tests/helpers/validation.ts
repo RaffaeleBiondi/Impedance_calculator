@@ -18,7 +18,7 @@ import type { LineGeom } from '../../src/solver/problem';
 import type { BuildFn, DiffResult, Mode, SEResult } from '../../src/solver/types';
 import { legacy } from './legacy';
 import {
-  cohnCoupled, cohnStrip, cpwFinite, cpwg, cpwInfinite, embeddedMicrostrip, hjMicrostrip, kjCoupledMicrostrip,
+  cohnCoupled, cohnStrip, cpwFinite, cpwg, cpwInfinite, embeddedMicrostrip, ETA0, hjMicrostrip, kjCoupledMicrostrip,
   offsetStripline,
 } from './refs';
 import { innerB, outerB, sel, stack, xsOf } from './stackups';
@@ -125,34 +125,37 @@ function zOf(xs: CrossSection, line: LineGeom, q: number, rich = true): number {
 /**
  * Independent second reference: a uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct
  * solve; zero-thickness strips as Dirichlet nodes; cell-centred er; capacitance from the field energy; grounded
- * rectangular box), written independently by the reviewer of the reference formulas and run read-only here. Not part of the npm suite, so
- * the values are pinned here. Each value is extrapolated to d → 0 from the two or three finest grids
- * (d = 0.01 / 0.005 / 0.0025 mm; observed order 0.97–1.0, so order 1 is used). Raw grid values are recorded in
- * docs/validation.md. The box truncation matters for the open geometries: CPW without backside metal
- * (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z), embedded microstrip (box 3×2 → 6×4 mm: +0.15–0.16 % on Z,
- * +0.20 % on εeff, measured at covers 0.025 and 0.1 and applied to all four) and slightly CPWG (box 3 → 6:
- * +0.10–0.14 %). Those values carry a box-size correction to an unbounded domain, estimated from these
- * sequences. Estimated uncertainty: ±0.1 % (offset stripline), ±0.2 % (embedded), ±0.3 % (CPW, CPWG).
+ * rectangular box), written independently by the reviewer of the reference formulas. The scripts are in
+ * scripts/fd-reference/ (optional, Python with numpy and scipy); they are not part of the npm suite, so the
+ * values are pinned here. Grid steps d = 0.01 / 0.005 / 0.0025 mm.
+ * - Extrapolation to d → 0 (`fit`): from three grids where all three resolve the geometry (observed order
+ *   0.97–1.0, used as measured); otherwise from the two grids that do, with order 1 assumed. At d = 0.01 mm
+ *   some strip, slot or cover edges fall off the grid, and the next finer grid was not run.
+ * - Box-size correction to an unbounded domain (`box`), for the open geometries, from measured box-size
+ *   sequences (CPW without backside metal: box 3 → 6 → 12 mm gives +0.35 % then +0.09 % on Z; embedded:
+ *   3×2 → 6×4 mm gives +0.15–0.16 % on Z and +0.20 % on εeff; CPWG: 3 → 6 mm gives +0.10–0.14 %).
+ * - Estimated uncertainty: ±0.1 % (offset stripline), ±0.2 % (embedded), ±0.3 % (CPW, CPWG).
  */
+const TWO = 'two grids, order 1 assumed';
 export const FD = {
   offset: [
-    { W: 0.2, H1: 0.1, H2: 0.3, er: 4.4, z: 39.536, raw: '38.697 / 39.112 / 39.322' },
-    { W: 0.1, H1: 0.1, H2: 0.3, er: 4, z: 60.103, raw: '58.138 / 59.101 / 59.592' },
-    { W: 0.2, H1: 0.1, H2: 0.2, er: 4, z: 39.128, raw: '38.266 / 38.696 / 38.912' },
+    { W: 0.2, H1: 0.1, H2: 0.3, er: 4.4, z: 39.536, raw: '38.697 / 39.112 / 39.322', fit: 'three grids, observed order 0.98', box: 'none (closed planes; side walls 1.5 mm away, not measured)' },
+    { W: 0.1, H1: 0.1, H2: 0.3, er: 4, z: 60.103, raw: '58.138 / 59.101 / 59.592', fit: 'three grids, observed order 0.97', box: 'none (closed planes; side walls 1.5 mm away, not measured)' },
+    { W: 0.2, H1: 0.1, H2: 0.2, er: 4, z: 39.128, raw: '38.266 / 38.696 / 38.912', fit: 'three grids, observed order 0.99', box: 'none (closed planes; side walls 1.5 mm away, not measured)' },
   ],
   embedded: [ // W 0.2, H 0.1, er 4.4
-    { Hc: 0.025, z: 46.432, eeff: 3.6766, raw: 'box 3×2, d 0.005 / 0.0025: 45.865 / 46.100, εeff 3.6681 / 3.6674; box 6×4 at d 0.005: 45.936, εeff 3.6756' },
-    { Hc: 0.05, z: 45.389, eeff: 3.8472, raw: 'box 3×2, d 0.01 / 0.005: 44.400 / 44.847, εeff 3.8364 / 3.8366' },
-    { Hc: 0.1, z: 44.234, eeff: 4.0511, raw: 'box 3×2, d 0.005 / 0.0025: 43.709 / 43.925, εeff 4.0390 / 4.0396; box 6×4 at d 0.005: 43.778, εeff 4.0469' },
-    { Hc: 0.2, z: 43.278, eeff: 4.2315, raw: 'box 3×2, d 0.01 / 0.005: 42.347 / 42.767, εeff 4.2175 / 4.2188' },
+    { Hc: 0.025, z: 46.432, eeff: 3.6766, raw: 'box 3×2, d 0.005 / 0.0025: 45.865 / 46.100, εeff 3.6681 / 3.6674; box 6×4 at d 0.005: 45.936, εeff 3.6756', fit: `${TWO} (d 0.005 / 0.0025; at d 0.01 the cover interface falls off the cell-centred grid)`, box: '+0.21 % Z0, +0.27 % εeff' },
+    { Hc: 0.05, z: 45.389, eeff: 3.8472, raw: 'box 3×2, d 0.01 / 0.005: 44.400 / 44.847, εeff 3.8364 / 3.8366', fit: `${TWO} (d 0.01 / 0.005; d 0.0025 not run)`, box: '+0.21 % Z0, +0.27 % εeff' },
+    { Hc: 0.1, z: 44.234, eeff: 4.0511, raw: 'box 3×2, d 0.005 / 0.0025: 43.709 / 43.925, εeff 4.0390 / 4.0396; box 6×4 at d 0.005: 43.778, εeff 4.0469', fit: `${TWO} (d 0.005 / 0.0025; d 0.01 / 0.005 gives the same within 0.005 %)`, box: '+0.21 % Z0, +0.27 % εeff' },
+    { Hc: 0.2, z: 43.278, eeff: 4.2315, raw: 'box 3×2, d 0.01 / 0.005: 42.347 / 42.767, εeff 4.2175 / 4.2188', fit: `${TWO} (d 0.01 / 0.005; d 0.0025 not run)`, box: '+0.21 % Z0, +0.27 % εeff' },
   ],
   cpwOpen: [
-    { W: 0.2, G: 0.1, h: 0.2, er: 4.4, z: 76.20, eeff: 2.500, raw: 'box 3: 73.483 / 74.661 / 75.252, εeff 2.4948 / 2.4928 / 2.4917; box 6 / 12 at d 0.01: 73.740 / 73.804' },
-    { W: 0.15, G: 0.15, h: 0.1, er: 4.4, z: 100.21, eeff: 2.158, raw: 'box 3, d 0.005 / 0.0025: 98.297 / 98.987, εeff 2.1520 / 2.1510; box 6 at d 0.005: 98.709, εeff 2.1576' },
+    { W: 0.2, G: 0.1, h: 0.2, er: 4.4, z: 76.20, eeff: 2.500, raw: 'box 3: 73.483 / 74.661 / 75.252, εeff 2.4948 / 2.4928 / 2.4917; box 6 / 12 at d 0.01: 73.740 / 73.804', fit: 'three grids, observed order 0.99', box: '+0.47 % Z0, +0.36 % εeff' },
+    { W: 0.15, G: 0.15, h: 0.1, er: 4.4, z: 100.21, eeff: 2.158, raw: 'box 3, d 0.005 / 0.0025: 98.297 / 98.987, εeff 2.1520 / 2.1510; box 6 at d 0.005: 98.709, εeff 2.1576', fit: `${TWO} (d 0.005 / 0.0025; at d 0.01 the strip and slot edges fall off the grid)`, box: '+0.53 % Z0, +0.35 % εeff' },
   ],
   cpwg: [
-    { W: 0.2, G: 0.1, h: 0.2, er: 4.4, z: 61.43, eeff: 2.913, raw: 'box 3: 59.625 / 60.476 / 60.902, εeff 2.9063 / 2.9076 / 2.9082; box 6 at d 0.01: 59.706, εeff 2.9102' },
-    { W: 0.15, G: 0.15, h: 0.1, er: 4.4, z: 56.34, eeff: 3.1745, raw: 'box 3, d 0.005 / 0.0025: 55.478 / 55.872, εeff 3.1727 / 3.1713; box 6 at d 0.005: 55.532, εeff 3.1762' },
+    { W: 0.2, G: 0.1, h: 0.2, er: 4.4, z: 61.43, eeff: 2.913, raw: 'box 3: 59.625 / 60.476 / 60.902, εeff 2.9063 / 2.9076 / 2.9082; box 6 at d 0.01: 59.706, εeff 2.9102', fit: 'three grids, observed order 1.00', box: '+0.17 % Z0, +0.16 % εeff' },
+    { W: 0.15, G: 0.15, h: 0.1, er: 4.4, z: 56.34, eeff: 3.1745, raw: 'box 3, d 0.005 / 0.0025: 55.478 / 55.872, εeff 3.1727 / 3.1713; box 6 at d 0.005: 55.532, εeff 3.1762', fit: `${TWO} (d 0.005 / 0.0025; at d 0.01 the strip and slot edges fall off the grid)`, box: '+0.13 % Z0, +0.14 % εeff' },
   ],
 } as const;
 /** Agreement required between the solver and the FD second reference to accept a recorded deviation. */
@@ -326,7 +329,9 @@ export function v3(): Check {
     detail: table(['Mode', 'Solver (Ω)', 'Cohn (Ω)', 'Error'], [
       ['odd', f(r.Zodd), f(ref.zoo), sp(eo)], ['even', f(r.Zeven), f(ref.zoe), sp(ee)],
     ]),
-    notes: [],
+    notes: [
+      `The conformal-map references (Cohn, CPW, CPWG) use the exact free-space impedance η0 = ${ETA0} Ω, consistent with the c0 and ε0 the solver uses. The original page quoted −0.05 / −0.06 % here with η0 = 120π (the usual 30π factor), which biases the reference by a constant +0.069 %; with η0 = 120π this solve reads Zodd ${sp(((1 + eo / 100) * ETA0 / (120 * Math.PI) - 1) * 100)}, Zeven ${sp(((1 + ee / 100) * ETA0 / (120 * Math.PI) - 1) * 100)}.`,
+    ],
   };
 }
 
@@ -345,7 +350,7 @@ export function v4(): Check {
     },
     failures: maxAbs(es) <= 0.15 ? [] : [`V4 ${es}`],
     detail: table(['W', 'Solver (Ω)', 'Cohn (Ω)', 'Error'], rows),
-    notes: [],
+    notes: [`Cohn with the exact η0 (see V3). With η0 = 120π, as in the figures quoted in the spec (−0.009 to −0.023 %), this solve reads ${range(es.map((e) => ((1 + e / 100) * ETA0 / (120 * Math.PI) - 1) * 100))}.`],
   };
 }
 
@@ -583,14 +588,15 @@ export function v9b(): Check {
   return {
     row: {
       id: 'V9b', test: 'Asymmetric stripline H1 ≠ H2: T 0, homogeneous, q 2 (3 cases)',
-      reference: 'offset-stripline formula (Wadell Z0,air combination; no accuracy published)',
+      reference: 'uncorrected offset-stripline term 2·Z1·Z2/(Z1+Z2) (Wadell / IPC-2141A Z0,air without its ΔZ0,air correction; no accuracy published)',
       result: `solver vs formula ${range(ef, 2)}; solver vs independent FD ${range(eF, 2)}`,
-      acceptance: 'formula: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 %', status: 'deviation-recorded',
+      acceptance: 'uncorrected term: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 %', status: 'deviation-recorded',
     },
     failures,
     detail: table(['W', 'H1', 'H2', 'εr', 'Solver (Ω)', 'Formula (Ω)', 'Solver vs formula', 'FD (Ω)', 'Solver vs FD', 'Formula vs FD'], rows),
     notes: [
-      `The formula combines two half-structures, Z0 = 2·Z1·Z2/(Z1 + Z2), and neglects the fringing coupling between them (refs.ts). No accuracy is published for it in the sources available. The independent FD solve agrees with the solver within ${f(maxAbs(eF), 2)} % and puts the formula ${range(fF, 2)} off, growing with offset and W/(H1+H2) (the review of the reference formulas found +3 % at H1/H2 = 1/3, W/b = 0.5). The solver holds; the deviation is the formula's.`,
+      'Only the uncorrected term is compared: Z0 = 2·Z1·Z2/(Z1 + Z2), the parallel combination of two centred-stripline halves, which neglects the fringing coupling between them. The published Wadell / IPC-2141A formula adds a correction term ΔZ0,air for exactly that coupling, but its printed form could not be verified in an open source (the one reproduction found contains an evident typo), so it is left out (refs.ts). This row therefore records the error of the uncorrected term, not of the full published formula.',
+      `The independent FD solve agrees with the solver within ${f(maxAbs(eF), 2)} % and puts the uncorrected term ${range(fF, 2)} high: ${FD.offset.map((c, i) => `${sp(fF[i], 2)} at W ${c.W}, H2/H1 = ${f(c.H2 / c.H1, 0)}`).join(', ')}. The error is larger at the stronger offset; at the same offset it is larger for the narrower trace. An independent image-Green's-function method-of-moments check by the reviewer (not pinned here) also agreed with the solver to about 0.05 %. The solver holds; the deviation is the uncorrected term's.`,
     ],
   };
 }
@@ -630,7 +636,7 @@ export function v10b(rows = embRows()): Check {
   return {
     row: {
       id: 'V10b', test: 'Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2)',
-      reference: 'Wadell / IPC-2141A embedded approximation (secondary source: "estimated ±3 %")',
+      reference: 'Wadell / IPC-2141A embedded approximation ("estimated ±3 %" on Z0, quoted by the pcb-toolkit crate, a secondary source)',
       result: `solver vs formula ${range(ez, 2)}; solver vs independent FD ${range(eF, 2)}`, acceptance: '±3 %', status: 'pass',
     },
     failures: maxAbs(ez) <= 3 ? [] : [`V10b ${ez}`],
@@ -674,7 +680,7 @@ export function v11(): Check {
       id: 'V11', test: `CPW without ground: substrate 20·(W+2G) = ${f(h, 1)} mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2`,
       reference: 'exact conformal map (infinitely thick substrate)',
       result: `Z0 dom 1 ${sp(ez[0])}, dom 2 ${sp(ez[1])}; εeff dom 1 ${sp(ee[0])}, dom 2 ${sp(ee[1])}`,
-      acceptance: 'Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %)', status: 'pass',
+      acceptance: 'Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff band ≤ 1 %, accepted under the review ruling and deferred (known mesh-grading limitation)', status: 'pass',
     },
     failures: [
       ...(maxAbs(ez) <= 0.3 ? [] : [`V11 Z0 ${ez} %`]),
@@ -685,7 +691,7 @@ export function v11(): Check {
       rs.map((x, i) => [String(x.dom), f(x.r.Z0, 4), f(ref.z0, 4), sp(ez[i]), f(x.r.eeff, 4), f(ref.eeff, 4), sp(ee[i]), String(x.r.nodes)])),
     notes: [
       `The finite-substrate formula at h = ${f(h, 1)} mm differs from the infinite one by ${sp(pct(cpwFinite(W, G, h, er).z0, ref.z0), 4)}, so the substrate is thick enough.`,
-      'Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.254 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both; the εeff error at dom 2 is recorded. The shipped analysis uses dom 1. Recorded as a solver concern (mesh grading on very large open domains); the convergence check V7 on the example stackup\'s CPW without ground passes.',
+      `Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact ${f(ref.z0, 3)} Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both. The dom 2 εeff error is accepted within a 1 % band under the review ruling and its fix is deferred: it is a known limitation of the mesh grading on very large open domains, not of the far boundary. The shipped analysis uses dom 1, and the convergence check V7 on the example stackup\'s CPW without ground passes.`,
     ],
   };
 }
@@ -714,11 +720,11 @@ function v12(kind: 'cpw' | 'cpwg'): Check {
     if (fd) fdz.push(zF);
     if (fd && !(Math.abs(zF) <= FD_TOL)) failures.push(`${id} ${W}/${G}/${h}: solver vs FD Z0 ${zF} %`);
     if (fd && !(Math.abs(eF) <= FD_TOL)) failures.push(`${id} ${W}/${G}/${h}: solver vs FD εeff ${eF} %`);
-    if (Math.abs(a) > 1) {
-      if (!fd) failures.push(`${id} ${W}/${G}/${h}: ${a} % beyond ~1 % with no second reference`);
+    if (Math.abs(a) > 1 || Math.abs(b) > 1) {
+      if (!fd) failures.push(`${id} ${W}/${G}/${h}: Z0 ${a} % / εeff ${b} % beyond ~1 % with no second reference`);
       else {
         deviation = true;
-        devs.push(`at W ${W}, G ${G}, h ${h} mm the formula reads ${sp(pct(ref.z0, fd.z), 2)} on Z0 against the FD, which agrees with the solver within ${f(Math.max(Math.abs(zF), Math.abs(eF)), 2)} % on Z0 and εeff`);
+        devs.push(`at W ${W}, G ${G}, h ${h} mm the formula reads ${sp(pct(ref.z0, fd.z), 2)} on Z0 and ${sp(pct(ref.eeff, fd.eeff), 2)} on εeff against the FD, which agrees with the solver within ${f(Math.max(Math.abs(zF), Math.abs(eF)), 2)} % on both`);
       }
     }
     rows.push([f(W, 2), f(G, 2), f(h, 2), String(er), f(r.Z0), f(ref.z0), sp(a, 2), sp(b, 2),
@@ -730,7 +736,7 @@ function v12(kind: 'cpw' | 'cpwg'): Check {
       id, test: `${name}: T 0, q 2 (4 cases, h 0.1–0.5 mm)`,
       reference: `${kind === 'cpw' ? 'Ghione / Veyres–Fouad Hanna' : 'Ghione-Naldi'} partial capacitance (Qucs, Simons; no accuracy stated)`,
       result: `solver vs formula: Z0 ${range(ez, 2)}, εeff ${range(ee, 2)}` + (fds.length ? `; solver vs independent FD ${range(fdz, 2)} (Z0, h ≤ 0.2 mm cases)` : ''),
-      acceptance: '~1 % (recorded); beyond it, FD second reference ≤ 0.5 %', status: deviation ? 'deviation-recorded' : 'pass',
+      acceptance: '~1 % on Z0 and εeff (recorded); beyond it, FD second reference ≤ 0.5 %', status: deviation ? 'deviation-recorded' : 'pass',
     },
     failures,
     detail: table(['W', 'G', 'h', 'εr', 'Solver Z0 (Ω)', 'Formula (Ω)', 'Z0 error', 'εeff error', 'FD Z0 (Ω)', 'Solver vs FD (Z0)', 'Solver vs FD (εeff)'], rows),

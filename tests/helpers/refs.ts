@@ -2,8 +2,15 @@ import { ellipK } from '../../src/solver/elliptic';
 
 // Reference formulas, spec Appendix A.
 
+/**
+ * Exact free-space impedance eta0 = mu0 c0 (ohm), consistent with the c0 and eps0 the solver uses.
+ * The conformal-map formulas are usually printed with 30 pi = eta0/4 and 60 pi = eta0/2, i.e. eta0 = 120 pi,
+ * which biases them by a constant +0.069 % against an exact-constant solver; they use eta0/4 and eta0/2 here.
+ */
+export const ETA0 = 376.730313668;
+
 const kPrime = (k: number): number => ellipK(Math.sqrt(1 - k * k));
-const zr = (k: number, er: number): number => (30 * Math.PI / Math.sqrt(er)) * kPrime(k) / ellipK(k);
+const zr = (k: number, er: number): number => (ETA0 / 4 / Math.sqrt(er)) * kPrime(k) / ellipK(k);
 
 /** Cohn stripline (T = 0, centred, homogeneous). */
 export function cohnStrip(W: number, b: number, er: number): number {
@@ -32,7 +39,7 @@ export function hjMicrostrip(u: number, er: number): { z0: number; eeff: number 
 export function cpwInfinite(W: number, G: number, er: number): { z0: number; eeff: number } {
   const k0 = W / (W + 2 * G);
   const eeff = (er + 1) / 2;
-  return { z0: (30 * Math.PI / Math.sqrt(eeff)) * kPrime(k0) / ellipK(k0), eeff };
+  return { z0: (ETA0 / 4 / Math.sqrt(eeff)) * kPrime(k0) / ellipK(k0), eeff };
 }
 
 // ---------------------------------------------------------------------------
@@ -123,12 +130,12 @@ export function kjCoupledMicrostrip(W: number, S: number, H: number, er: number)
  * themselves, so the correction term dZ0,air (whose printed form on that page
  * contains an evident typo) is NOT included.
  *
- * Exact when H1 = H2 (reduces to Cohn). For H1 != H2 the fringing field
- * coupling between the two half-spaces is neglected; NO accuracy figure for
- * this is published in the sources I could open. Treat it as a first-order
- * reference whose error grows with offset and W/(H1+H2); Task 6b should
- * compare it to the solver with a tolerance chosen from observed behaviour
- * and say so.
+ * Exact when H1 = H2 (reduces to Cohn). For H1 != H2 this uncorrected term
+ * neglects the fringing coupling between the two half-spaces (which is what
+ * the omitted dZ0,air term corrects); NO accuracy figure is published for the
+ * uncorrected term in the sources I could open. The validation (V9b) compares
+ * only this uncorrected term and records its deviation; it is not a test of
+ * the full published Wadell / IPC-2141A formula.
  *
  * H1, H2: distance from the (zero-thickness) trace to each plane.
  */
@@ -155,7 +162,9 @@ export function offsetStripline(W: number, H1: number, H2: number, er: number): 
  * formula.
  *
  * Limits: Hcover -> 0 gives the surface microstrip, Hcover -> inf gives
- * eeff = er. Stated accuracy: none found in an open source. The IPC
+ * eeff = er. Stated accuracy: the pcb-toolkit crate (src/impedance/embedded.rs)
+ * quotes "estimated ±3 %" on Z0; that is a secondary source (Wadell and
+ * IPC-2141A themselves were not checked), and no figure is given for eeff. The IPC
  * literature calls embedded-microstrip formulas "an approximation" and
  * reports 20-40 % error vs a field solver for the (different) IPC-2251 draft
  * form (Clemson EMC lab page); do not read that as this formula's accuracy.
@@ -183,7 +192,7 @@ export function embedFromSurface(surf: { z0: number; eeff: number }, H: number, 
  * Waveguide Circuits, Components, and Systems, Wiley 2001, ch. 2).
  *   k1 = W/(W+2G), k2 = sinh(pi W/4h) / sinh(pi (W+2G)/4h)
  *   eeff = 1 + (er-1)/2 * K(k2)/K'(k2) * K'(k1)/K(k1)
- *   Z0   = 30 pi / sqrt(eeff) * K'(k1)/K(k1)
+ *   Z0   = 30 pi / sqrt(eeff) * K'(k1)/K(k1)     (coded with eta0/4 in place of 30 pi, see ETA0)
  *
  * Magnetic-wall conformal-mapping approximation. Qucs states the K/K'
  * evaluation is accurate to ~1e-5 but gives NO accuracy figure for the model
@@ -193,7 +202,7 @@ export function cpwFinite(W: number, G: number, h: number, er: number): { z0: nu
   const k1 = W / (W + 2 * G);
   const k2 = Math.sinh(Math.PI * W / (4 * h)) / Math.sinh(Math.PI * (W + 2 * G) / (4 * h));
   const eeff = 1 + (er - 1) / 2 * (ellipK(k2) / kPrime(k2)) * (kPrime(k1) / ellipK(k1));
-  return { z0: (30 * Math.PI / Math.sqrt(eeff)) * kPrime(k1) / ellipK(k1), eeff };
+  return { z0: (ETA0 / 4 / Math.sqrt(eeff)) * kPrime(k1) / ellipK(k1), eeff };
 }
 
 /**
@@ -206,7 +215,7 @@ export function cpwFinite(W: number, G: number, h: number, er: number): { z0: nu
  *   k1 = W/(W+2G), k3 = tanh(pi W/4h) / tanh(pi (W+2G)/4h)
  *   q  = [K(k3)/K'(k3)] / [K(k1)/K'(k1) + K(k3)/K'(k3)]
  *   eeff = 1 + q (er-1)
- *   Z0 = 60 pi / sqrt(eeff) / [K(k1)/K'(k1) + K(k3)/K'(k3)]
+ *   Z0 = 60 pi / sqrt(eeff) / [K(k1)/K'(k1) + K(k3)/K'(k3)]     (coded with eta0/2, see ETA0)
  *
  * Stated accuracy: none in the Qucs text (conformal-mapping, magnetic-wall
  * approximation; K/K' evaluation ~1e-5). h -> inf tends to cpwInfinite.
@@ -217,5 +226,5 @@ export function cpwg(W: number, G: number, h: number, er: number): { z0: number;
   const r1 = ellipK(k1) / kPrime(k1);
   const r3 = ellipK(k3) / kPrime(k3);
   const eeff = 1 + (r3 / (r1 + r3)) * (er - 1);
-  return { z0: (60 * Math.PI / Math.sqrt(eeff)) / (r1 + r3), eeff };
+  return { z0: (ETA0 / 2 / Math.sqrt(eeff)) / (r1 + r3), eeff };
 }

@@ -18,22 +18,22 @@ Zero-thickness reference geometries (V3–V6, V9–V12): stripline, microstrip a
 | V1 | Regression, example stackup, q 2 (five width-table cases) | original page; re-baselined masked cases | unmasked 50.031 / 100.786 Ω (unchanged); masked 50.36 → 50.311, 100.78 → 100.724, 90.18 → 90.131 Ω | unmasked ±0.02 Ω of the original; masked ±0.02 Ω of the new golden | pass |
 | V1c | V1 masked cases converged: rich(2,4) vs rich(4,8) | self (mesh convergence) | −0.0026 % … −0.0023 % | ≤ 0.02 % | pass |
 | V2 | Legacy equivalence: generalised builder vs legacy builder, unmasked legacy topologies | legacy buildProblem | max relative difference 0.0e+0 (6 cases, q 1) | identical grid; ≤ 1e-9 relative | pass |
-| V3 | Coupled stripline: T 0, b 0.4, εr 4, W 0.15 / S 0.25, q 4 | Cohn (exact conformal map) | Zodd −0.051 %, Zeven −0.057 % | ≤ 0.1 % | pass |
-| V4 | Single stripline: T 0, b 0.4, εr 4, W 0.1 / 0.2 / 0.4, q 2 | Cohn (exact conformal map) | −0.023 % … −0.009 % | ≤ 0.15 % | pass |
+| V3 | Coupled stripline: T 0, b 0.4, εr 4, W 0.15 / S 0.25, q 4 | Cohn (exact conformal map) | Zodd +0.018 %, Zeven +0.012 % | ≤ 0.1 % | pass |
+| V4 | Single stripline: T 0, b 0.4, εr 4, W 0.1 / 0.2 / 0.4, q 2 | Cohn (exact conformal map) | +0.047 % … +0.060 % | ≤ 0.15 % | pass |
 | V5 | Microstrip: T 0, no mask, H 0.12, εr 3.9, W/H 0.5 / 1 / 2, q 4, dom 1 and 2 | Hammerstad-Jensen (εeff ~0.2 %) | −0.073 % … −0.025 % | ≤ 0.2 % | pass |
 | V6 | Coupled microstrip: T 0, no mask, H 0.12, εr 3.9, W/H and S/H 0.5 / 1 / 2, q 2 | Kirschning-Jansen (static Z < 0.6 %) | Zeven, Zodd −0.341 % … +0.307 % (εeff −0.285 % … +0.367 %) | ≤ 0.6 % (KJ stated accuracy) | pass |
 | V7 | Mesh convergence rich(1,2) vs rich(2,4): six legacy cases plus every new topology (15 cases) | self | −0.006 % … +0.012 %; masked outer SE +0.008 % (legacy grid −0.265 %) | ≤ 0.3 %; masked case ~0.01 % | pass |
 | V8 | Homogeneous cross-sections give εeff = εr (5 topologies) | exact | max relative error 0.0e+0 | ≤ 1e-4 relative | pass |
-| V9a | Asymmetric stripline, symmetric limit H1 = H2: T 0, homogeneous, q 2 | Cohn (exact) | −0.031 % … −0.007 % | ≤ 0.15 % | pass |
-| V9b | Asymmetric stripline H1 ≠ H2: T 0, homogeneous, q 2 (3 cases) | offset-stripline formula (Wadell Z0,air combination; no accuracy published) | solver vs formula −3.50 % … −1.19 %; solver vs independent FD +0.04 % … +0.05 % | formula: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 % | **deviation recorded** |
+| V9a | Asymmetric stripline, symmetric limit H1 = H2: T 0, homogeneous, q 2 | Cohn (exact) | +0.038 % … +0.063 % | ≤ 0.15 % | pass |
+| V9b | Asymmetric stripline H1 ≠ H2: T 0, homogeneous, q 2 (3 cases) | uncorrected offset-stripline term 2·Z1·Z2/(Z1+Z2) (Wadell / IPC-2141A Z0,air without its ΔZ0,air correction; no accuracy published) | solver vs formula −3.43 % … −1.12 %; solver vs independent FD +0.04 % … +0.05 % | uncorrected term: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 % | **deviation recorded** |
 | V10a | Embedded microstrip, limit: cover 1e-6 mm vs plain microstrip (T 0, H 0.1, εr 4.4, q 2) | limit (cover → 0 equals microstrip) | −0.0007 % … −0.0005 % | ≤ 0.1 % | pass |
-| V10b | Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2) | Wadell / IPC-2141A embedded approximation (secondary source: "estimated ±3 %") | solver vs formula +1.10 % … +2.50 %; solver vs independent FD −0.02 % … +0.00 % | ±3 % | pass |
+| V10b | Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2) | Wadell / IPC-2141A embedded approximation ("estimated ±3 %" on Z0, quoted by the pcb-toolkit crate, a secondary source) | solver vs formula +1.10 % … +2.50 %; solver vs independent FD −0.02 % … +0.00 % | ±3 % | pass |
 | V10c | Embedded microstrip εeff, cover 0.025–0.2 mm (same cases) | Wadell / IPC-2141A embedded approximation (no εeff accuracy stated) | solver vs formula −4.92 % … −2.28 %; solver vs independent FD −0.09 % … −0.08 % | formula: none stated, deviation recorded (band ≤ 6 %); FD second reference ≤ 0.5 % | **deviation recorded** |
-| V11 | CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2 | exact conformal map (infinitely thick substrate) | Z0 dom 1 +0.053 %, dom 2 +0.164 %; εeff dom 1 +0.140 %, dom 2 +0.608 % | Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %) | pass |
-| V12a | CPW on a finite substrate (no backside metal): T 0, q 2 (4 cases, h 0.1–0.5 mm) | Ghione / Veyres–Fouad Hanna partial capacitance (Qucs, Simons; no accuracy stated) | solver vs formula: Z0 −1.77 % … −0.21 %, εeff +0.36 % … +3.29 %; solver vs independent FD −0.03 % … +0.04 % (Z0, h ≤ 0.2 mm cases) | ~1 % (recorded); beyond it, FD second reference ≤ 0.5 % | **deviation recorded** |
-| V12b | CPWG (conductor-backed CPW): T 0, q 2 (4 cases, h 0.1–0.5 mm) | Ghione-Naldi partial capacitance (Qucs, Simons; no accuracy stated) | solver vs formula: Z0 −1.76 % … −0.03 %, εeff −1.25 % … −0.01 %; solver vs independent FD +0.02 % … +0.06 % (Z0, h ≤ 0.2 mm cases) | ~1 % (recorded); beyond it, FD second reference ≤ 0.5 % | **deviation recorded** |
+| V11 | CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2 | exact conformal map (infinitely thick substrate) | Z0 dom 1 +0.122 %, dom 2 +0.234 %; εeff dom 1 +0.140 %, dom 2 +0.608 % | Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff band ≤ 1 %, accepted under the review ruling and deferred (known mesh-grading limitation) | pass |
+| V12a | CPW on a finite substrate (no backside metal): T 0, q 2 (4 cases, h 0.1–0.5 mm) | Ghione / Veyres–Fouad Hanna partial capacitance (Qucs, Simons; no accuracy stated) | solver vs formula: Z0 −1.70 % … −0.14 %, εeff +0.36 % … +3.29 %; solver vs independent FD −0.03 % … +0.04 % (Z0, h ≤ 0.2 mm cases) | ~1 % on Z0 and εeff (recorded); beyond it, FD second reference ≤ 0.5 % | **deviation recorded** |
+| V12b | CPWG (conductor-backed CPW): T 0, q 2 (4 cases, h 0.1–0.5 mm) | Ghione-Naldi partial capacitance (Qucs, Simons; no accuracy stated) | solver vs formula: Z0 −1.69 % … +0.03 %, εeff −1.25 % … −0.01 %; solver vs independent FD +0.02 % … +0.06 % (Z0, h ≤ 0.2 mm cases) | ~1 % on Z0 and εeff (recorded); beyond it, FD second reference ≤ 0.5 % | **deviation recorded** |
 | V13 | Trapezoid: limits, slices, observed mesh order (3 cases) | limits and convergence | W_top = W equals the rectangle; Z between rect(W) and rect(W_top); 8 vs 16 slices −0.024 % … +0.020 %; observed order 1.34–1.38 (TRAP_ORDER 1.35) | ≤ 1e-9; between; ≤ 0.1 %; order recorded | pass |
-| V14 | Dielectric loss | exact homogeneous stripline; microstrip self-consistency identity | pending (Task 7) | ≤ 0.1 % / ≤ 0.5 % | not validated |
+| V14 | Dielectric loss at 5 GHz, tanδ 0.02: homogeneous stripline; microstrip (T 0.035, H 0.12, εr 4, W 0.22, no mask) | exact α = π f √εr tanδ / c; identity tanδeff = (εr/εeff)·∂εeff/∂εr·tanδ | stripline +0.001 %; microstrip identity +0.001 % | ≤ 0.1 % / ≤ 0.5 % | pass |
 | V15 | Solder mask (microstrip T 0.035, H 0.12, εr 3.9, W 0.22, q 2): t 0–20 µm, εr 3–4 | none exists: sensitivity only | t = 0 reproduces no mask exactly; Z decreases monotonically in t and εr (down to −4.78 % at 20 µm, εr 4) | recorded; not validated against a reference | not validated |
 | V16 | Model and IO: stackup validation, reference defaults, orientation, slabs, etch, units, JSON, URL hash, KiCad import, CSV | — (unit tests, tests/model and tests/io) | 96 / 96 tests pass (9 files) | unit tests | pass |
 
@@ -100,8 +100,10 @@ Reference: Cohn (exact conformal map). Acceptance: ≤ 0.1 %. Status: pass.
 
 | Mode | Solver (Ω) | Cohn (Ω) | Error |
 |---|---|---|---|
-| odd | 55.136 | 55.164 | −0.051 % |
-| even | 61.275 | 61.310 | −0.057 % |
+| odd | 55.136 | 55.126 | +0.018 % |
+| even | 61.275 | 61.268 | +0.012 % |
+
+The conformal-map references (Cohn, CPW, CPWG) use the exact free-space impedance η0 = 376.730313668 Ω, consistent with the c0 and ε0 the solver uses. The original page quoted −0.05 / −0.06 % here with η0 = 120π (the usual 30π factor), which biases the reference by a constant +0.069 %; with η0 = 120π this solve reads Zodd −0.051 %, Zeven −0.057 %.
 
 ### V4: Single stripline: T 0, b 0.4, εr 4, W 0.1 / 0.2 / 0.4, q 2
 
@@ -109,9 +111,11 @@ Reference: Cohn (exact conformal map). Acceptance: ≤ 0.15 %. Status: pass.
 
 | W | Solver (Ω) | Cohn (Ω) | Error |
 |---|---|---|---|
-| 0.1 | 70.0006 | 70.0070 | −0.009 % |
-| 0.2 | 50.2441 | 50.2510 | −0.014 % |
-| 0.4 | 32.6920 | 32.6994 | −0.023 % |
+| 0.1 | 70.0006 | 69.9585 | +0.060 % |
+| 0.2 | 50.2441 | 50.2162 | +0.055 % |
+| 0.4 | 32.6920 | 32.6768 | +0.047 % |
+
+Cohn with the exact η0 (see V3). With η0 = 120π, as in the figures quoted in the spec (−0.009 to −0.023 %), this solve reads −0.023 % … −0.009 %.
 
 ### V5: Microstrip: T 0, no mask, H 0.12, εr 3.9, W/H 0.5 / 1 / 2, q 4, dom 1 and 2
 
@@ -186,21 +190,23 @@ Reference: Cohn (exact). Acceptance: ≤ 0.15 %. Status: pass.
 
 | W | H1 | H2 | εr | Solver (Ω) | Cohn (Ω) | Error |
 |---|---|---|---|---|---|---|
-| 0.10 | 0.15 | 0.15 | 3.9 | 62.4242 | 62.4437 | −0.031 % |
-| 0.30 | 0.15 | 0.15 | 3.9 | 33.1085 | 33.1160 | −0.023 % |
-| 0.20 | 0.25 | 0.25 | 4.4 | 53.8315 | 53.8351 | −0.007 % |
+| 0.10 | 0.15 | 0.15 | 3.9 | 62.4242 | 62.4005 | +0.038 % |
+| 0.30 | 0.15 | 0.15 | 3.9 | 33.1085 | 33.0931 | +0.047 % |
+| 0.20 | 0.25 | 0.25 | 4.4 | 53.8315 | 53.7978 | +0.063 % |
 
 ### V9b: Asymmetric stripline H1 ≠ H2: T 0, homogeneous, q 2 (3 cases)
 
-Reference: offset-stripline formula (Wadell Z0,air combination; no accuracy published). Acceptance: formula: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 %. Status: **deviation recorded**.
+Reference: uncorrected offset-stripline term 2·Z1·Z2/(Z1+Z2) (Wadell / IPC-2141A Z0,air without its ΔZ0,air correction; no accuracy published). Acceptance: uncorrected term: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 %. Status: **deviation recorded**.
 
 | W | H1 | H2 | εr | Solver (Ω) | Formula (Ω) | Solver vs formula | FD (Ω) | Solver vs FD | Formula vs FD |
 |---|---|---|---|---|---|---|---|---|---|
-| 0.20 | 0.10 | 0.30 | 4.4 | 39.552 | 40.746 | −2.93 % | 39.536 | +0.04 % | +3.06 % |
-| 0.10 | 0.10 | 0.30 | 4 | 60.125 | 62.304 | −3.50 % | 60.103 | +0.04 % | +3.66 % |
-| 0.20 | 0.10 | 0.20 | 4 | 39.147 | 39.618 | −1.19 % | 39.128 | +0.05 % | +1.25 % |
+| 0.20 | 0.10 | 0.30 | 4.4 | 39.552 | 40.718 | −2.86 % | 39.536 | +0.04 % | +2.99 % |
+| 0.10 | 0.10 | 0.30 | 4 | 60.125 | 62.261 | −3.43 % | 60.103 | +0.04 % | +3.59 % |
+| 0.20 | 0.10 | 0.20 | 4 | 39.147 | 39.591 | −1.12 % | 39.128 | +0.05 % | +1.18 % |
 
-The formula combines two half-structures, Z0 = 2·Z1·Z2/(Z1 + Z2), and neglects the fringing coupling between them (refs.ts). No accuracy is published for it in the sources available. The independent FD solve agrees with the solver within 0.05 % and puts the formula +1.25 % … +3.66 % off, growing with offset and W/(H1+H2) (the review of the reference formulas found +3 % at H1/H2 = 1/3, W/b = 0.5). The solver holds; the deviation is the formula's.
+Only the uncorrected term is compared: Z0 = 2·Z1·Z2/(Z1 + Z2), the parallel combination of two centred-stripline halves, which neglects the fringing coupling between them. The published Wadell / IPC-2141A formula adds a correction term ΔZ0,air for exactly that coupling, but its printed form could not be verified in an open source (the one reproduction found contains an evident typo), so it is left out (refs.ts). This row therefore records the error of the uncorrected term, not of the full published formula.
+
+The independent FD solve agrees with the solver within 0.05 % and puts the uncorrected term +1.18 % … +3.59 % high: +2.99 % at W 0.2, H2/H1 = 3, +3.59 % at W 0.1, H2/H1 = 3, +1.18 % at W 0.2, H2/H1 = 2. The error is larger at the stronger offset; at the same offset it is larger for the narrower trace. An independent image-Green's-function method-of-moments check by the reviewer (not pinned here) also agreed with the solver to about 0.05 %. The solver holds; the deviation is the uncorrected term's.
 
 ### V10a: Embedded microstrip, limit: cover 1e-6 mm vs plain microstrip (T 0, H 0.1, εr 4.4, q 2)
 
@@ -213,7 +219,7 @@ Reference: limit (cover → 0 equals microstrip). Acceptance: ≤ 0.1 %. Status:
 
 ### V10b: Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2)
 
-Reference: Wadell / IPC-2141A embedded approximation (secondary source: "estimated ±3 %"). Acceptance: ±3 %. Status: pass.
+Reference: Wadell / IPC-2141A embedded approximation ("estimated ±3 %" on Z0, quoted by the pcb-toolkit crate, a secondary source). Acceptance: ±3 %. Status: pass.
 
 | Cover (mm) | Solver Z0 (Ω) | Formula (Ω) | Error | FD (Ω) | Solver vs FD |
 |---|---|---|---|---|---|
@@ -237,42 +243,42 @@ The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/
 
 ### V11: CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2
 
-Reference: exact conformal map (infinitely thick substrate). Acceptance: Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %). Status: pass.
+Reference: exact conformal map (infinitely thick substrate). Acceptance: Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff band ≤ 1 %, accepted under the review ruling and deferred (known mesh-grading limitation). Status: pass.
 
 | dom | Solver Z0 (Ω) | Exact (Ω) | Error | Solver εeff | Exact | Error | Nodes (finer mesh) |
 |---|---|---|---|---|---|---|---|
-| 1 | 76.2938 | 76.2536 | +0.053 % | 2.5035 | 2.5000 | +0.140 % | 80280 |
-| 2 | 76.3790 | 76.2536 | +0.164 % | 2.5152 | 2.5000 | +0.608 % | 106074 |
+| 1 | 76.2938 | 76.2009 | +0.122 % | 2.5035 | 2.5000 | +0.140 % | 80280 |
+| 2 | 76.3790 | 76.2009 | +0.234 % | 2.5152 | 2.5000 | +0.608 % | 106074 |
 
 The finite-substrate formula at h = 8.0 mm differs from the infinite one by +0.0033 %, so the substrate is thick enough.
 
-Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.254 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both; the εeff error at dom 2 is recorded. The shipped analysis uses dom 1. Recorded as a solver concern (mesh grading on very large open domains); the convergence check V7 on the example stackup's CPW without ground passes.
+Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.201 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both. The dom 2 εeff error is accepted within a 1 % band under the review ruling and its fix is deferred: it is a known limitation of the mesh grading on very large open domains, not of the far boundary. The shipped analysis uses dom 1, and the convergence check V7 on the example stackup's CPW without ground passes.
 
 ### V12a: CPW on a finite substrate (no backside metal): T 0, q 2 (4 cases, h 0.1–0.5 mm)
 
-Reference: Ghione / Veyres–Fouad Hanna partial capacitance (Qucs, Simons; no accuracy stated). Acceptance: ~1 % (recorded); beyond it, FD second reference ≤ 0.5 %. Status: **deviation recorded**.
+Reference: Ghione / Veyres–Fouad Hanna partial capacitance (Qucs, Simons; no accuracy stated). Acceptance: ~1 % on Z0 and εeff (recorded); beyond it, FD second reference ≤ 0.5 %. Status: **deviation recorded**.
 
 | W | G | h | εr | Solver Z0 (Ω) | Formula (Ω) | Z0 error | εeff error | FD Z0 (Ω) | Solver vs FD (Z0) | Solver vs FD (εeff) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 0.20 | 0.10 | 0.20 | 4.4 | 76.233 | 76.704 | −0.61 % | +1.14 % | 76.20 | +0.04 % | −0.04 % |
-| 0.20 | 0.15 | 0.30 | 4 | 87.945 | 88.351 | −0.46 % | +0.85 % | — | — | — |
-| 0.30 | 0.10 | 0.50 | 3.9 | 69.355 | 69.499 | −0.21 % | +0.36 % | — | — | — |
-| 0.15 | 0.15 | 0.10 | 4.4 | 100.181 | 101.986 | −1.77 % | +3.29 % | 100.21 | −0.03 % | −0.09 % |
+| 0.20 | 0.10 | 0.20 | 4.4 | 76.233 | 76.651 | −0.54 % | +1.14 % | 76.20 | +0.04 % | −0.04 % |
+| 0.20 | 0.15 | 0.30 | 4 | 87.945 | 88.289 | −0.39 % | +0.85 % | — | — | — |
+| 0.30 | 0.10 | 0.50 | 3.9 | 69.355 | 69.451 | −0.14 % | +0.36 % | — | — | — |
+| 0.15 | 0.15 | 0.10 | 4.4 | 100.181 | 101.916 | −1.70 % | +3.29 % | 100.21 | −0.03 % | −0.09 % |
 
-The partial-capacitance formulas put magnetic walls along the slot edges inside the substrate and publish no accuracy; they degrade when the substrate is thin compared with the slots (h < W + 2G). Recorded: at W 0.15, G 0.15, h 0.1 mm the formula reads +1.77 % on Z0 against the FD, which agrees with the solver within 0.09 % on Z0 and εeff. The solver holds; the deviation is the formula's.
+The partial-capacitance formulas put magnetic walls along the slot edges inside the substrate and publish no accuracy; they degrade when the substrate is thin compared with the slots (h < W + 2G). Recorded: at W 0.2, G 0.1, h 0.2 mm the formula reads +0.59 % on Z0 and −1.17 % on εeff against the FD, which agrees with the solver within 0.04 % on both; at W 0.15, G 0.15, h 0.1 mm the formula reads +1.70 % on Z0 and −3.27 % on εeff against the FD, which agrees with the solver within 0.09 % on both. The solver holds; the deviation is the formula's.
 
 ### V12b: CPWG (conductor-backed CPW): T 0, q 2 (4 cases, h 0.1–0.5 mm)
 
-Reference: Ghione-Naldi partial capacitance (Qucs, Simons; no accuracy stated). Acceptance: ~1 % (recorded); beyond it, FD second reference ≤ 0.5 %. Status: **deviation recorded**.
+Reference: Ghione-Naldi partial capacitance (Qucs, Simons; no accuracy stated). Acceptance: ~1 % on Z0 and εeff (recorded); beyond it, FD second reference ≤ 0.5 %. Status: **deviation recorded**.
 
 | W | G | h | εr | Solver Z0 (Ω) | Formula (Ω) | Z0 error | εeff error | FD Z0 (Ω) | Solver vs FD (Z0) | Solver vs FD (εeff) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 0.20 | 0.10 | 0.20 | 4.4 | 61.467 | 61.587 | −0.19 % | −0.11 % | 61.43 | +0.06 % | +0.02 % |
-| 0.20 | 0.15 | 0.30 | 4 | 75.810 | 75.932 | −0.16 % | −0.09 % | — | — | — |
-| 0.30 | 0.10 | 0.50 | 3.9 | 64.937 | 64.960 | −0.03 % | −0.01 % | — | — | — |
-| 0.15 | 0.15 | 0.10 | 4.4 | 56.353 | 57.363 | −1.76 % | −1.25 % | 56.34 | +0.02 % | −0.04 % |
+| 0.20 | 0.10 | 0.20 | 4.4 | 61.467 | 61.544 | −0.13 % | −0.11 % | 61.43 | +0.06 % | +0.02 % |
+| 0.20 | 0.15 | 0.30 | 4 | 75.810 | 75.880 | −0.09 % | −0.09 % | — | — | — |
+| 0.30 | 0.10 | 0.50 | 3.9 | 64.937 | 64.915 | +0.03 % | −0.01 % | — | — | — |
+| 0.15 | 0.15 | 0.10 | 4.4 | 56.353 | 57.323 | −1.69 % | −1.25 % | 56.34 | +0.02 % | −0.04 % |
 
-The partial-capacitance formulas put magnetic walls along the slot edges inside the substrate and publish no accuracy; they degrade when the substrate is thin compared with the slots (h < W + 2G; with h < G the line is closer to a microstrip with side grounds). Recorded: at W 0.15, G 0.15, h 0.1 mm the formula reads +1.82 % on Z0 against the FD, which agrees with the solver within 0.04 % on Z0 and εeff. The solver holds; the deviation is the formula's.
+The partial-capacitance formulas put magnetic walls along the slot edges inside the substrate and publish no accuracy; they degrade when the substrate is thin compared with the slots (h < W + 2G; with h < G the line is closer to a microstrip with side grounds). Recorded: at W 0.15, G 0.15, h 0.1 mm the formula reads +1.75 % on Z0 and +1.23 % on εeff against the FD, which agrees with the solver within 0.04 % on both. The solver holds; the deviation is the formula's.
 
 ### V13: Trapezoid: limits, slices, observed mesh order (3 cases)
 
@@ -291,11 +297,16 @@ Reference: limits and convergence. Acceptance: ≤ 1e-9; between; ≤ 0.1 %; ord
 
 Richardson order for sliced trapezoids: `TRAP_ORDER` = 1.35 (src/solver/engine.ts). Measured three-mesh orders p = log2((Z1−Z2)/(Z2−Z4)) are 1.24–1.45 on ten trapezoid cases against 1.42–1.56 for rectangles; order 1.35 halves the worst rich(1,2) vs rich(2,4) spread compared with 1.5. Rectangles keep 1.5 with copper (1 at T = 0); open-boundary rectangles measure 1.50–1.56 and keep 1.5.
 
-### V14: Dielectric loss
+### V14: Dielectric loss at 5 GHz, tanδ 0.02: homogeneous stripline; microstrip (T 0.035, H 0.12, εr 4, W 0.22, no mask)
 
-Reference: exact homogeneous stripline; microstrip self-consistency identity. Acceptance: ≤ 0.1 % / ≤ 0.5 %. Status: not validated.
+Reference: exact α = π f √εr tanδ / c; identity tanδeff = (εr/εeff)·∂εeff/∂εr·tanδ. Acceptance: ≤ 0.1 % / ≤ 0.5 %. Status: pass.
 
-AnalyzeResult.lossDbPerM is not populated on this branch; the row is computed when Task 7 is merged and the report is regenerated.
+| Case | Solver (dB/m) | Reference (dB/m) | Error |
+|---|---|---|---|
+| homogeneous stripline | 18.2045 | 18.2043 | +0.001 % |
+| microstrip identity | 13.2746 | 13.2745 | +0.001 % |
+
+The identity uses a central difference of εeff over εr ± 0.01 of the single dielectric (no mask, so air is the only other material).
 
 ### V15: Solder mask (microstrip T 0.035, H 0.12, εr 3.9, W 0.22, q 2): t 0–20 µm, εr 3–4
 
@@ -315,18 +326,22 @@ Reference: — (unit tests, tests/model and tests/io). Acceptance: unit tests. S
 
 ## Second reference: independent finite-difference solve
 
-A uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct solve; zero-thickness strips as Dirichlet nodes; cell-centred εr; capacitance from the field energy; grounded rectangular box), written independently of this solver by the reviewer of the reference formulas. It is not part of the npm suite, so its values are pinned in `tests/helpers/validation.ts`. Each value is extrapolated to d → 0 (observed order 0.97–1.0 on three grids, so order 1). The box truncation matters for the open geometries: CPW without backside metal (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z0), embedded microstrip (box 3×2 → 6×4 mm: +0.15–0.16 % on Z0, +0.20 % on εeff, measured at covers 0.025 and 0.1 mm and applied to all four) and slightly CPWG (+0.10–0.14 % from box 3 to 6). Those values carry a box-size correction to an unbounded domain. Estimated uncertainty: ±0.1 % (offset stripline), ±0.2 % (embedded), ±0.3 % (CPW, CPWG).
+A uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct solve; zero-thickness strips as Dirichlet nodes; cell-centred εr; capacitance from the field energy; grounded rectangular box), written independently of this solver by the reviewer of the reference formulas. The scripts are in `scripts/fd-reference/` (optional: Python with numpy and scipy; not part of the build). Its values are pinned in `tests/helpers/validation.ts`.
 
-| Geometry | Parameters (mm) | FD Z0 (Ω) | FD εeff | Raw grid values (d = 0.01 / 0.005 / 0.0025 mm unless stated) |
-|---|---|---|---|---|
-| offset stripline | W 0.2, H1 0.1, H2 0.3, εr 4.4 | 39.536 | 4.4 | 38.697 / 39.112 / 39.322 |
-| offset stripline | W 0.1, H1 0.1, H2 0.3, εr 4 | 60.103 | 4 | 58.138 / 59.101 / 59.592 |
-| offset stripline | W 0.2, H1 0.1, H2 0.2, εr 4 | 39.128 | 4 | 38.266 / 38.696 / 38.912 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.025, εr 4.4 | 46.432 | 3.6766 | box 3×2, d 0.005 / 0.0025: 45.865 / 46.100, εeff 3.6681 / 3.6674; box 6×4 at d 0.005: 45.936, εeff 3.6756 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.05, εr 4.4 | 45.389 | 3.8472 | box 3×2, d 0.01 / 0.005: 44.400 / 44.847, εeff 3.8364 / 3.8366 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.1, εr 4.4 | 44.234 | 4.0511 | box 3×2, d 0.005 / 0.0025: 43.709 / 43.925, εeff 4.0390 / 4.0396; box 6×4 at d 0.005: 43.778, εeff 4.0469 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.2, εr 4.4 | 43.278 | 4.2315 | box 3×2, d 0.01 / 0.005: 42.347 / 42.767, εeff 4.2175 / 4.2188 |
-| CPW, no backside metal | W 0.2, G 0.1, h 0.2, εr 4.4 | 76.2 | 2.5 | box 3: 73.483 / 74.661 / 75.252, εeff 2.4948 / 2.4928 / 2.4917; box 6 / 12 at d 0.01: 73.740 / 73.804 |
-| CPW, no backside metal | W 0.15, G 0.15, h 0.1, εr 4.4 | 100.21 | 2.158 | box 3, d 0.005 / 0.0025: 98.297 / 98.987, εeff 2.1520 / 2.1510; box 6 at d 0.005: 98.709, εeff 2.1576 |
-| CPWG | W 0.2, G 0.1, h 0.2, εr 4.4 | 61.43 | 2.913 | box 3: 59.625 / 60.476 / 60.902, εeff 2.9063 / 2.9076 / 2.9082; box 6 at d 0.01: 59.706, εeff 2.9102 |
-| CPWG | W 0.15, G 0.15, h 0.1, εr 4.4 | 56.34 | 3.1745 | box 3, d 0.005 / 0.0025: 55.478 / 55.872, εeff 3.1727 / 3.1713; box 6 at d 0.005: 55.532, εeff 3.1762 |
+- **Extrapolation to d → 0.** Where three grids (d = 0.01 / 0.005 / 0.0025 mm) all resolve the geometry, the observed order (0.97–1.0) is used. Several deviation cases use only two grids with order 1 assumed: the coarsest grid puts some strip, slot or cover edges off the grid, and a grid finer than 0.0025 mm (0.005 mm for two covers) was not run. The "Extrapolation" column says which.
+- **Box-size correction.** The grounded box truncates the open geometries: CPW without backside metal (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z0), embedded microstrip (box 3×2 → 6×4 mm: +0.15–0.16 % on Z0, +0.20 % on εeff, measured at covers 0.025 and 0.1 mm and applied to all four) and slightly CPWG (+0.10–0.14 % from box 3 to 6). The corrections applied to an unbounded domain are in the "Box correction" column.
+- **Estimated uncertainty:** ±0.1 % (offset stripline), ±0.2 % (embedded), ±0.3 % (CPW, CPWG).
+
+| Geometry | Parameters (mm) | FD Z0 (Ω) | FD εeff | Extrapolation | Box correction | Raw grid values (d = 0.01 / 0.005 / 0.0025 mm unless stated) |
+|---|---|---|---|---|---|---|
+| offset stripline | W 0.2, H1 0.1, H2 0.3, εr 4.4 | 39.536 | 4.4 | three grids, observed order 0.98 | none (closed planes; side walls 1.5 mm away, not measured) | 38.697 / 39.112 / 39.322 |
+| offset stripline | W 0.1, H1 0.1, H2 0.3, εr 4 | 60.103 | 4 | three grids, observed order 0.97 | none (closed planes; side walls 1.5 mm away, not measured) | 58.138 / 59.101 / 59.592 |
+| offset stripline | W 0.2, H1 0.1, H2 0.2, εr 4 | 39.128 | 4 | three grids, observed order 0.99 | none (closed planes; side walls 1.5 mm away, not measured) | 38.266 / 38.696 / 38.912 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.025, εr 4.4 | 46.432 | 3.6766 | two grids, order 1 assumed (d 0.005 / 0.0025; at d 0.01 the cover interface falls off the cell-centred grid) | +0.21 % Z0, +0.27 % εeff | box 3×2, d 0.005 / 0.0025: 45.865 / 46.100, εeff 3.6681 / 3.6674; box 6×4 at d 0.005: 45.936, εeff 3.6756 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.05, εr 4.4 | 45.389 | 3.8472 | two grids, order 1 assumed (d 0.01 / 0.005; d 0.0025 not run) | +0.21 % Z0, +0.27 % εeff | box 3×2, d 0.01 / 0.005: 44.400 / 44.847, εeff 3.8364 / 3.8366 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.1, εr 4.4 | 44.234 | 4.0511 | two grids, order 1 assumed (d 0.005 / 0.0025; d 0.01 / 0.005 gives the same within 0.005 %) | +0.21 % Z0, +0.27 % εeff | box 3×2, d 0.005 / 0.0025: 43.709 / 43.925, εeff 4.0390 / 4.0396; box 6×4 at d 0.005: 43.778, εeff 4.0469 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.2, εr 4.4 | 43.278 | 4.2315 | two grids, order 1 assumed (d 0.01 / 0.005; d 0.0025 not run) | +0.21 % Z0, +0.27 % εeff | box 3×2, d 0.01 / 0.005: 42.347 / 42.767, εeff 4.2175 / 4.2188 |
+| CPW, no backside metal | W 0.2, G 0.1, h 0.2, εr 4.4 | 76.2 | 2.5 | three grids, observed order 0.99 | +0.47 % Z0, +0.36 % εeff | box 3: 73.483 / 74.661 / 75.252, εeff 2.4948 / 2.4928 / 2.4917; box 6 / 12 at d 0.01: 73.740 / 73.804 |
+| CPW, no backside metal | W 0.15, G 0.15, h 0.1, εr 4.4 | 100.21 | 2.158 | two grids, order 1 assumed (d 0.005 / 0.0025; at d 0.01 the strip and slot edges fall off the grid) | +0.53 % Z0, +0.35 % εeff | box 3, d 0.005 / 0.0025: 98.297 / 98.987, εeff 2.1520 / 2.1510; box 6 at d 0.005: 98.709, εeff 2.1576 |
+| CPWG | W 0.2, G 0.1, h 0.2, εr 4.4 | 61.43 | 2.913 | three grids, observed order 1.00 | +0.17 % Z0, +0.16 % εeff | box 3: 59.625 / 60.476 / 60.902, εeff 2.9063 / 2.9076 / 2.9082; box 6 at d 0.01: 59.706, εeff 2.9102 |
+| CPWG | W 0.15, G 0.15, h 0.1, εr 4.4 | 56.34 | 3.1745 | two grids, order 1 assumed (d 0.005 / 0.0025; at d 0.01 the strip and slot edges fall off the grid) | +0.13 % Z0, +0.14 % εeff | box 3, d 0.005 / 0.0025: 55.478 / 55.872, εeff 3.1727 / 3.1713; box 6 at d 0.005: 55.532, εeff 3.1762 |
