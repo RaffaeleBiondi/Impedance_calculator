@@ -19,7 +19,7 @@ function Shell() {
         <img className="logo" src={logo128} srcSet={`${logo128} 1x, ${logo256} 2x`} width={40} height={40} alt="LordOfTheOhms logo" />
         <div className="titles">
           <h1>LordOfTheOhms</h1>
-          <p>PCB trace impedance calculator. Runs entirely in your browser.</p>
+          <p>PCB trace impedance calculator</p>
         </div>
         <button type="button" onClick={() => setImporting(true)}>Import KiCad&hellip;</button>
         <ThemeToggle />

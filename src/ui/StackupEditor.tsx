@@ -100,7 +100,7 @@ export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } 
           </tbody>
         </table>
       </div>
-      <p className="hint">Dielectric thickness is measured between copper faces. Click a copper layer name to calculate on it.</p>
+      <p className="hint">Click a copper layer to calculate on it.</p>
 
       {errors.length > 0 && (
         <ul className="issues" role="alert">
@@ -122,7 +122,7 @@ export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } 
           );
         })}
       </div>
-      <p className="hint">Thickness 0 means no mask.</p>
+      <p className="hint">0 = no mask.</p>
 
       <h3>Etch</h3>
       <div className="row">
@@ -133,10 +133,13 @@ export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } 
         </label>
         <RuleEditor rule={stackup.etch.rule} onChange={(rule) => dispatch({ type: 'setEtch', patch: { rule } })} label="Etch rule" />
       </div>
-      <p className="hint">
-        Placeholder rule of thumb &mdash; use your fab&rsquo;s value. Fraction: top width = W &minus; value&middot;T.
-        Factor: top width = W &minus; 2T/EF. Per-layer overrides are set in the layer rows.
-      </p>
+      <details className="more">
+        <summary>More</summary>
+        <p className="hint">
+          Placeholder rule of thumb &mdash; use your fab&rsquo;s value. Fraction: top width = W &minus; value&middot;T.
+          Factor: top width = W &minus; 2T/EF. Per-layer overrides are set in the layer rows.
+        </p>
+      </details>
 
       <h3>Files and sharing</h3>
       <div className="row wrap">

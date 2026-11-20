@@ -13,10 +13,7 @@ export function RoleReview({ stackup, warnings, onChange, onConfirm, onCancel }:
   return (
     <div>
       <h4>Review layer roles</h4>
-      <p className="hint">
-        KiCad often leaves plane layers typed as signal (and power planes as mixed), so the imported roles may be wrong.
-        Check each copper layer and fix it here before the stackup is used.
-      </p>
+      <p className="hint">Imported roles may be wrong. Check each copper layer.</p>
       <table>
         <thead><tr><th>Layer</th><th>Imported role</th><th>Thickness (mm)</th></tr></thead>
         <tbody>
