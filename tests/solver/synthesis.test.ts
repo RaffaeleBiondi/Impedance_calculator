@@ -1,4 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+let forceTooLarge = false;
+vi.mock('../../src/solver/engine', async (orig) => {
+  const m = await orig<typeof import('../../src/solver/engine')>();
+  return {
+    ...m,
+    analyze: (req: Parameters<typeof m.analyze>[0]) =>
+      forceTooLarge ? { ok: false as const, error: 'Geometry too large for the solver: 999999 mesh nodes exceed the 400000 cap' } : m.analyze(req),
+  };
+});
 import type { Selection } from '../../src/model/crossSection';
 import { exampleStackup } from '../../src/model/example';
 import type { AnalyzeRequest } from '../../src/solver/engine';
@@ -57,10 +67,57 @@ describe('synthesis', () => {
     expect(r.W).toBeGreaterThanOrEqual(0.125 - 1e-9);
     expect(r.S!).toBeGreaterThanOrEqual(0.125 - 1e-9);
   });
+  const finiteOrdered = (r: SynthResult) => {
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.zRange).toBeDefined();
+    const [a, b] = r.zRange!;
+    expect(Number.isFinite(a) && Number.isFinite(b)).toBe(true);
+    expect(a).toBeLessThan(b);
+    expect(r.message).not.toContain('NaN');
+  };
   it('compactAtTarget SE below fab minimum', () => {
     const r = compactAtTarget(se(), 80, 0.125);
-    expect(r.ok).toBe(false);
-    if (!r.ok) { expect(['below-fab', 'out-of-range']).toContain(r.reason); expect(r.zRange).toBeDefined(); }
+    finiteOrdered(r);
+    if (!r.ok) { expect(r.reason).toBe('below-fab'); expect(r.message).toContain(r.zRange![0].toFixed(1)); }
+  });
+  it('compactAtTarget diff below fab minimum', () => {
+    const r = compactAtTarget(diff(), 150, 0.125);
+    finiteOrdered(r);
+    if (!r.ok) expect(r.reason).toBe('below-fab');
+  });
+  it('compactAtTarget diff low target takes the smin branch', () => {
+    const r = ok(compactAtTarget(diff(), 40, 0.125));
+    expect(r.bound).toBe('smin');
+    expect(r.S).toBeCloseTo(0.125, 9);
+    expect(r.W).toBeGreaterThan(0.125);
+    expect(Math.abs(r.z - 40)).toBeLessThanOrEqual(0.5);
+  });
+  it('fixed-pitch near pitch - fmin and below-fab W', () => {
+    const near = tableCell(diff(), 40, { kind: 'fixed-pitch', pitch: 0.4 }, 0.125, 0.05).main;
+    if (near.ok) { expect(near.S!).toBeGreaterThanOrEqual(0.125 - 1e-9); expect(Math.abs(near.W + near.S! - 0.4)).toBeLessThan(1e-9); }
+    else expect(['out-of-range', 'below-fab']).toContain(near.reason);
+    const narrow = tableCell(diff(), 150, { kind: 'fixed-pitch', pitch: 0.6 }, 0.125, 0.05).main;
+    expect(narrow.ok).toBe(false);
+    if (!narrow.ok) expect(['below-fab', 'out-of-range']).toContain(narrow.reason);
+  });
+  it('fixed-gap flags W below fab', () => {
+    const r = tableCell(se(), 80, { kind: 'fixed-gap', gap: 0.2 }, 0.125, 0.05).main;
+    finiteOrdered(r);
+    if (!r.ok) expect(r.reason).toBe('below-fab');
+  });
+  it('compactWithinTol low target gives a real range', () => {
+    const r = compactWithinTol(diff(), { target: 300, tol: 0.05, fmin: 0.125 });
+    finiteOrdered(r);
+  });
+  it('q = 2 too-large error suggests the normal mesh, q = 1 does not', () => {
+    forceTooLarge = true;
+    try {
+      const a = findW({ ...se(), q: 2 }, 50);
+      const b = findW({ ...se(), q: 1 }, 50);
+      expect(a.ok || a.message).toContain('try the normal mesh');
+      expect(b.ok || b.message).not.toContain('try the normal mesh');
+    } finally { forceTooLarge = false; }
   });
   it('compactWithinTol cu5 SE 50 +-5 %', () => {
     const r = compactWithinTol(se(), { target: 50, tol: 0.05, fmin: 0.125 });

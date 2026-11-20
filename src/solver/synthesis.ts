@@ -117,9 +117,7 @@ function findWPitch(req: AnalyzeRequest, target: number, pitch: number, fmin: nu
     }
     const W = s.x;
     const r = finish(req, W, pitch - W);
-    if (r.ok && pitch - W < fmin) {
-      return { ok: false, reason: 'below-fab', zRange: [r.z, r.z], message: `Gap ${f3(pitch - W)} mm is below the fab minimum ${f3(fmin)} mm` };
-    }
+    if (r.ok && W < fmin) return belowFab(f, target, W, fmin, hi, req);
     return r;
   } catch (e) { return fail(e, req); }
 }
@@ -128,13 +126,7 @@ function findWPitch(req: AnalyzeRequest, target: number, pitch: number, fmin: nu
 export function compactAtTarget(req: AnalyzeRequest, target: number, fmin: number): SynthResult {
   if (req.line.type === 'se') {
     const r = findW(req, target);
-    if (r.ok && r.W < fmin) {
-      return {
-        ok: false, reason: 'below-fab',
-        message: `${fz(target)} ohm needs W ${f3(r.W)} mm, below the fab minimum ${f3(fmin)} mm`,
-        zRange: [analyzeZ(req, fmin), analyzeZ(req, fmin)],
-      };
-    }
+    if (r.ok && r.W < fmin) return belowFab((W) => zOf(withW(req, W)), target, r.W, fmin, 4, req);
     return r;
   }
   // Pair: narrowest W first, then the gap.
@@ -147,6 +139,11 @@ export function compactAtTarget(req: AnalyzeRequest, target: number, fmin: numbe
     return b;
   }
   if (a.reason !== 'out-of-range') return a;
+  if (a.zRange && target < a.zRange[0]) {
+    // Z is above target even at the smallest gap tried: pin S = fmin and widen the traces.
+    const b = findW(withS(req, fmin), target);
+    return b.ok ? { ...b, bound: 'smin' } : b;
+  }
   // Even a very wide gap leaves Z below target at W = fmin: the target needs W under the fab minimum.
   return {
     ok: false, reason: 'below-fab', zRange: a.zRange,
@@ -155,8 +152,34 @@ export function compactAtTarget(req: AnalyzeRequest, target: number, fmin: numbe
   };
 }
 
-function analyzeZ(req: AnalyzeRequest, W: number): number {
-  try { return zOf(withW(req, W)); } catch { return NaN; }
+/** Below-fab failure for a W search: reports the Z range reachable with W >= fmin (f falls with W). */
+function belowFab(
+  f: (W: number) => number, target: number, W: number, fmin: number, hiW: number, req: AnalyzeRequest,
+): SynthResult {
+  try {
+    const zHi = f(fmin);
+    const zLo = f(hiW);
+    if (!Number.isFinite(zHi) || !Number.isFinite(zLo)) return { ok: false, reason: 'error', message: 'Could not evaluate the reachable range' };
+    return {
+      ok: false, reason: 'below-fab', zRange: [Math.min(zLo, zHi), Math.max(zLo, zHi)],
+      message: `${fz(target)} ohm needs W ${f3(W)} mm, below the fab minimum ${f3(fmin)} mm; W from ${f3(fmin)} mm gives ${fz(Math.min(zLo, zHi))} to ${fz(Math.max(zLo, zHi))} ohm`,
+    };
+  } catch (e) { return fail(e, req); }
+}
+
+/** Evaluator for compact(): a point the engine refuses is replaced by the nearest accepted one, keeping monotonicity. */
+function clamped(f: (x: number) => number, origin: number, factor: number): (x: number) => number {
+  return (x) => {
+    let v = x;
+    for (let k = 0; k < 40; k++) {
+      try { return f(v); } catch (e) {
+        if (!(e instanceof EvalError) || e.message === NO_REFERENCE_SE || k === 39) throw e;
+        v = origin + (v - origin) * factor;
+        if (Math.abs(v - origin) < 1e-9) throw e;
+      }
+    }
+    throw new EvalError('No valid geometry in the search range');
+  };
 }
 
 const COMPACT_WHY: Record<string, (t: number) => string> = {
@@ -175,25 +198,38 @@ export function compactWithinTol(
   const pct = +(o.tol * 100).toFixed(2);
   const isDiff = req.line.type === 'diff';
   let c: CompactResult;
+  const zw = clamped((W) => zOf(withW(req, W)), lim, 0.8);
+  const zdw = clamped((W) => zOf(withWS(req, W, lim)), lim, 0.8);
+  const zds = clamped((S) => zOf(withWS(req, lim, S)), lim, 0.8);
   try {
     c = compact(
       { target: o.target, tol: o.tol, diff: isDiff, wmin: lim, smin: lim, step: o.step ?? 0.005 },
-      isDiff ? undefined : (W) => zOf(withW(req, W)),
+      isDiff ? undefined : zw,
       isDiff ? (W, S) => zOf(withWS(req, W, S)) : undefined,
     );
   } catch (e) { return fail(e, req); }
   if (!c.ok) {
-    if (c.why === 'low') {
-      const z = c.z as number;
+    try {
+      // Reach of the search: W from lim to 4 (and, for a pair, S from lim to 8 at W = lim).
+      const zW = [isDiff ? zdw(lim) : zw(lim), isDiff ? zdw(4) : zw(4)];
+      const zS = isDiff ? [zds(lim), zds(8)] : zW;
+      const all = (c.why === 'low' ? [...zW, ...zS] : zW).filter(Number.isFinite);
+      if (all.length === 0) return { ok: false, reason: 'error', message: 'Could not evaluate the reachable range' };
+      const zRange: [number, number] = [Math.min(...all), Math.max(...all)];
+      if (c.why === 'low') {
+        return {
+          ok: false, reason: 'out-of-range', zRange,
+          message: isDiff
+            ? `At W ${lim} mm the pair reaches at most ${fz(zRange[1])} ohm, outside ${o.target} ohm +/-${pct} %`
+            : `Even at W ${lim} mm Z is ${fz(zW[0])} ohm, below -${pct} % of ${o.target} ohm`,
+          detail: 'Use a smaller fab minimum or a wider tolerance.',
+        };
+      }
       return {
-        ok: false, reason: 'out-of-range', zRange: [z, z],
-        message: isDiff
-          ? `At W ${lim} mm the pair reaches at most ${fz(z)} ohm, outside ${o.target} ohm +/-${pct} %`
-          : `Even at W ${lim} mm Z is ${fz(z)} ohm, below -${pct} % of ${o.target} ohm`,
-        detail: 'Use a smaller fab minimum or a wider tolerance.',
+        ok: false, reason: 'out-of-range', zRange,
+        message: `No geometry within +/-${pct} % of ${o.target} ohm: Z reaches ${fz(zRange[0])} to ${fz(zRange[1])} ohm`,
       };
-    }
-    return { ok: false, reason: 'out-of-range', message: 'No geometry found within the tolerance' };
+    } catch (e) { return fail(e, req); }
   }
   const r = finish(req, c.W, c.S, c.bound);
   if (!r.ok) return r;
@@ -211,10 +247,9 @@ export function tableCell(
   let main: SynthResult;
   if (rule.kind === 'compact-at-target') main = compactAtTarget(req, target, fmin);
   else if (rule.kind === 'fixed-gap') {
-    main = req.line.type === 'se' ? findW(req, target) : findW(withS(req, rule.gap), target);
-    if (main.ok && main.W < fmin) {
-      main = { ok: false, reason: 'below-fab', message: `${fz(target)} ohm needs W ${f3(main.W)} mm, below the fab minimum ${f3(fmin)} mm` };
-    }
+    const r = req.line.type === 'se' ? req : withS(req, rule.gap);
+    main = findW(r, target);
+    if (main.ok && main.W < fmin) main = belowFab((W) => zOf(withW(r, W)), target, main.W, fmin, 4, r);
   } else main = req.line.type === 'se' ? findW(req, target) : findWPitch(req, target, rule.pitch, fmin);
   return { main, compact: compactRes };
 }
