@@ -82,4 +82,15 @@ describe('WidthTable', () => {
     expect(screen.queryByRole('button', { name: /CSV/ })).toBeNull();
     expect(screen.queryByTestId('width-grid')).toBeNull();
   });
+
+  it('shows a failure detail inside a collapsed Why? fold', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Run table' }));
+    const b = h.batches[0];
+    const fail = { ok: false, message: 'target out of reach', detail: 'Longer explanation.' };
+    await act(async () => { b.d.resolve(b.jobs.map(() => ({ main: fail, compact: fail }))); });
+    const d = (await screen.findAllByText('Why?'))[0].closest('details')!;
+    expect(d).not.toHaveAttribute('open');
+    expect(d).toHaveTextContent('Longer explanation.');
+  });
 });

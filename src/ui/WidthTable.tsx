@@ -13,6 +13,18 @@ import type { Job } from '../solver/protocol';
 
 type Refs = { above: string | null; below: string | null };
 const EPS = 1e-9;
+type Cell = CellResult & { detail?: string };
+
+function Fail({ c }: { c: Cell }) {
+  if (c.ok) return null;
+  return (
+    <>
+      {c.message}
+      {c.detail && <details className="more"><summary>Why?</summary>{c.detail}</details>}
+    </>
+  );
+}
+
 const RULE_LABEL: Record<GapRule['kind'], string> = {
   'compact-at-target': 'Compact at target', 'fixed-gap': 'Fixed gap', 'fixed-pitch': 'Fixed pitch',
 };
@@ -82,7 +94,7 @@ export function WidthTable() {
       }
     }
     setErr(''); setRows(null); setProg([0, jobs.length]);
-    const h = pool.runBatch<{ main: CellResult; compact: CellResult }>(jobs, (d, t) => setProg([d, t]));
+    const h = pool.runBatch<{ main: Cell; compact: Cell }>(jobs, (d, t) => setProg([d, t]));
     cancelRef.current = h.cancel;
     h.promise
       .then((rs) => setRows(rs.map((r, i) => ({ ...meta[i], main: r.main, compact: r.compact }))))
@@ -184,7 +196,7 @@ export function WidthTable() {
             </thead>
             <tbody>
               {rows.map((r, i) => {
-                const m = r.main, c = r.compact, diff = r.cls.type === 'diff';
+                const m = r.main as Cell, c = r.compact as Cell, diff = r.cls.type === 'diff';
                 const below = m.ok && (m.W < calc.fmin - EPS || (m.S !== undefined && m.S < calc.fmin - EPS));
                 const fm = foot(m, diff), fc = foot(c, diff);
                 const saved = Number.isFinite(fm) && Number.isFinite(fc) && fm > 0 ? ((fm - fc) / fm) * 100 : null;
@@ -198,7 +210,7 @@ export function WidthTable() {
                         <td className={below ? 'warn' : ''} title={below ? `Below fab minimum ${formatLen(calc.fmin, unit)}` : 'Meets fab minimum'}>{below ? '⚠' : '✓'}</td>
                       </>
                     ) : (
-                      <td colSpan={5} className="warn">{m.message}</td>
+                      <td colSpan={5} className="warn"><Fail c={m} /></td>
                     )}
                     {c.ok ? (
                       <>
@@ -207,7 +219,7 @@ export function WidthTable() {
                         <td>{saved === null ? '' : `${saved.toFixed(0)}%`}</td>
                       </>
                     ) : (
-                      <td colSpan={5} className="warn">{c.message}</td>
+                      <td colSpan={5} className="warn"><Fail c={c} /></td>
                     )}
                   </tr>
                 );
