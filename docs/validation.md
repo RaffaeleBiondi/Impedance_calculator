@@ -8,7 +8,7 @@ Every geometry is checked against a closed form, an exact limit or a published r
 - **deviation recorded**: the reference publishes no accuracy, or the result is outside it. Per the failed-validation policy (spec §5) it was investigated with an independent second reference (a finite-difference solve, below) and the convergence check; the second reference agrees with the solver within 0.5 %, so the solver holds and the measured deviation of the formula is shown here and on the page;
 - **not validated**: no reference exists (solder mask: sensitivity only), or the feature is not in this build yet.
 
-Zero-thickness reference geometries (V3–V6, V9–V12) are hand-built cross-sections, not Stackup objects: the model refuses copper of thickness 0, and on an open side it turns the far copper of a test stackup into a "cut out" slab of dielectric that is not part of the reference geometry (it first made the 1e-6 mm-cover embedded line read −5.6 % against plain microstrip). A test checks that the hand-built stripline and microstrip equal the model's cross-sections.
+Zero-thickness reference geometries (V3–V6, V9–V12): stripline, microstrip and CPWG go through the Stackup model with T set to 0 afterwards (the model refuses copper of thickness 0). The open-side geometries (embedded microstrip, CPW without backside metal: V10, V11, V12a) are hand-built cross-sections, because on an open side the model turns the far copper of a stackup into a "cut out" slab of dielectric that is not part of the reference geometry (through the Stackup route it made the 1e-6 mm-cover embedded line read −5.6 % against plain microstrip). A test checks that the hand-built ones equal the model's cross-sections minus that slab.
 
 ## Summary
 
@@ -27,9 +27,9 @@ Zero-thickness reference geometries (V3–V6, V9–V12) are hand-built cross-sec
 | V9a | Asymmetric stripline, symmetric limit H1 = H2: T 0, homogeneous, q 2 | Cohn (exact) | −0.031 % … −0.007 % | ≤ 0.15 % | pass |
 | V9b | Asymmetric stripline H1 ≠ H2: T 0, homogeneous, q 2 (3 cases) | offset-stripline formula (Wadell Z0,air combination; no accuracy published) | solver vs formula −3.50 % … −1.19 %; solver vs independent FD +0.04 % … +0.05 % | formula: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 % | **deviation recorded** |
 | V10a | Embedded microstrip, limit: cover 1e-6 mm vs plain microstrip (T 0, H 0.1, εr 4.4, q 2) | limit (cover → 0 equals microstrip) | −0.0007 % … −0.0005 % | ≤ 0.1 % | pass |
-| V10b | Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2) | Wadell / IPC-2141A embedded approximation (secondary source: "estimated ±3 %") | solver vs formula +1.10 % … +2.50 %; solver vs independent FD +0.19 % … +0.21 % | ±3 % | pass |
-| V10c | Embedded microstrip εeff, cover 0.025–0.2 mm (same cases) | Wadell / IPC-2141A embedded approximation (no εeff accuracy stated) | solver vs formula −4.92 % … −2.28 %; solver vs independent FD +0.18 % … +0.19 % | formula: none stated, deviation recorded (band ≤ 6 %); FD second reference ≤ 0.5 % | **deviation recorded** |
-| V11 | CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2 | exact conformal map (infinitely thick substrate) | Z0 dom 1 +0.053 %, dom 2 +0.164 %; εeff dom 1 +0.140 %, dom 2 +0.608 % | Z0 ≤ 0.3 %; dom 1 vs 2 recorded | pass |
+| V10b | Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2) | Wadell / IPC-2141A embedded approximation (secondary source: "estimated ±3 %") | solver vs formula +1.10 % … +2.50 %; solver vs independent FD −0.02 % … +0.00 % | ±3 % | pass |
+| V10c | Embedded microstrip εeff, cover 0.025–0.2 mm (same cases) | Wadell / IPC-2141A embedded approximation (no εeff accuracy stated) | solver vs formula −4.92 % … −2.28 %; solver vs independent FD −0.09 % … −0.08 % | formula: none stated, deviation recorded (band ≤ 6 %); FD second reference ≤ 0.5 % | **deviation recorded** |
+| V11 | CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2 | exact conformal map (infinitely thick substrate) | Z0 dom 1 +0.053 %, dom 2 +0.164 %; εeff dom 1 +0.140 %, dom 2 +0.608 % | Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %) | pass |
 | V12a | CPW on a finite substrate (no backside metal): T 0, q 2 (4 cases, h 0.1–0.5 mm) | Ghione / Veyres–Fouad Hanna partial capacitance (Qucs, Simons; no accuracy stated) | solver vs formula: Z0 −1.77 % … −0.21 %, εeff +0.36 % … +3.29 %; solver vs independent FD −0.03 % … +0.04 % (Z0, h ≤ 0.2 mm cases) | ~1 % (recorded); beyond it, FD second reference ≤ 0.5 % | **deviation recorded** |
 | V12b | CPWG (conductor-backed CPW): T 0, q 2 (4 cases, h 0.1–0.5 mm) | Ghione-Naldi partial capacitance (Qucs, Simons; no accuracy stated) | solver vs formula: Z0 −1.76 % … −0.03 %, εeff −1.25 % … −0.01 %; solver vs independent FD +0.02 % … +0.06 % (Z0, h ≤ 0.2 mm cases) | ~1 % (recorded); beyond it, FD second reference ≤ 0.5 % | **deviation recorded** |
 | V13 | Trapezoid: limits, slices, observed mesh order (3 cases) | limits and convergence | W_top = W equals the rectangle; Z between rect(W) and rect(W_top); 8 vs 16 slices −0.024 % … +0.020 %; observed order 1.34–1.38 (TRAP_ORDER 1.35) | ≤ 1e-9; between; ≤ 0.1 %; order recorded | pass |
@@ -200,7 +200,7 @@ Reference: offset-stripline formula (Wadell Z0,air combination; no accuracy publ
 | 0.10 | 0.10 | 0.30 | 4 | 60.125 | 62.304 | −3.50 % | 60.103 | +0.04 % | +3.66 % |
 | 0.20 | 0.10 | 0.20 | 4 | 39.147 | 39.618 | −1.19 % | 39.128 | +0.05 % | +1.25 % |
 
-The formula combines two half-structures, Z0 = 2·Z1·Z2/(Z1 + Z2), and neglects the fringing coupling between them (refs.ts). No accuracy is published for it in the sources available. The independent FD solve agrees with the solver within 0.05 % and puts the formula +1.25 % … +3.66 % off, growing with offset and W/(H1+H2) (the Task 6a review found +3 % at H1/H2 = 1/3, W/b = 0.5). The solver holds; the deviation is the formula's.
+The formula combines two half-structures, Z0 = 2·Z1·Z2/(Z1 + Z2), and neglects the fringing coupling between them (refs.ts). No accuracy is published for it in the sources available. The independent FD solve agrees with the solver within 0.05 % and puts the formula +1.25 % … +3.66 % off, growing with offset and W/(H1+H2) (the review of the reference formulas found +3 % at H1/H2 = 1/3, W/b = 0.5). The solver holds; the deviation is the formula's.
 
 ### V10a: Embedded microstrip, limit: cover 1e-6 mm vs plain microstrip (T 0, H 0.1, εr 4.4, q 2)
 
@@ -217,10 +217,10 @@ Reference: Wadell / IPC-2141A embedded approximation (secondary source: "estimat
 
 | Cover (mm) | Solver Z0 (Ω) | Formula (Ω) | Error | FD (Ω) | Solver vs FD |
 |---|---|---|---|---|---|
-| 0.025 | 46.421 | 45.916 | +1.10 % | 46.335 | +0.19 % |
-| 0.050 | 45.378 | 44.451 | +2.09 % | 45.294 | +0.19 % |
-| 0.100 | 44.227 | 43.149 | +2.50 % | 44.141 | +0.19 % |
-| 0.200 | 43.278 | 42.536 | +1.74 % | 43.187 | +0.21 % |
+| 0.025 | 46.421 | 45.916 | +1.10 % | 46.432 | −0.02 % |
+| 0.050 | 45.378 | 44.451 | +2.09 % | 45.389 | −0.02 % |
+| 0.100 | 44.227 | 43.149 | +2.50 % | 44.234 | −0.02 % |
+| 0.200 | 43.278 | 42.536 | +1.74 % | 43.278 | +0.00 % |
 
 ### V10c: Embedded microstrip εeff, cover 0.025–0.2 mm (same cases)
 
@@ -228,16 +228,16 @@ Reference: Wadell / IPC-2141A embedded approximation (no εeff accuracy stated).
 
 | Cover (mm) | Solver εeff | Formula | Error | FD | Solver vs FD |
 |---|---|---|---|---|---|
-| 0.025 | 3.6736 | 3.7595 | −2.28 % | 3.6667 | +0.19 % |
-| 0.050 | 3.8438 | 4.0115 | −4.18 % | 3.8368 | +0.18 % |
-| 0.100 | 4.0477 | 4.2571 | −4.92 % | 4.0402 | +0.19 % |
-| 0.200 | 4.2277 | 4.3807 | −3.49 % | 4.2201 | +0.18 % |
+| 0.025 | 3.6736 | 3.7595 | −2.28 % | 3.6766 | −0.08 % |
+| 0.050 | 3.8438 | 4.0115 | −4.18 % | 3.8472 | −0.09 % |
+| 0.100 | 4.0477 | 4.2571 | −4.92 % | 4.0511 | −0.08 % |
+| 0.200 | 4.2277 | 4.3807 | −3.49 % | 4.2315 | −0.09 % |
 
-The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads +2.53 % … +5.37 % against the FD (the Task 6a review found +5.4 % at Hc = H). The FD second reference agrees with the solver within 0.21 % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.
+The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads +2.25 % … +5.08 % against the FD (the review of the reference formulas found +5.4 % at Hc = H). The FD second reference agrees with the solver within 0.09 % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.
 
 ### V11: CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2
 
-Reference: exact conformal map (infinitely thick substrate). Acceptance: Z0 ≤ 0.3 %; dom 1 vs 2 recorded. Status: pass.
+Reference: exact conformal map (infinitely thick substrate). Acceptance: Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %). Status: pass.
 
 | dom | Solver Z0 (Ω) | Exact (Ω) | Error | Solver εeff | Exact | Error | Nodes (finer mesh) |
 |---|---|---|---|---|---|---|---|
@@ -246,7 +246,7 @@ Reference: exact conformal map (infinitely thick substrate). Acceptance: Z0 ≤ 
 
 The finite-substrate formula at h = 8.0 mm differs from the infinite one by +0.0033 %, so the substrate is thick enough.
 
-Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.254 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both; the εeff error at dom 2 is recorded. The shipped analysis uses dom 1. Reported to the solver owner as a grading concern for very large open domains; the convergence check V7 on the example stackup's CPW without ground passes.
+Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.254 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both; the εeff error at dom 2 is recorded. The shipped analysis uses dom 1. Recorded as a solver concern (mesh grading on very large open domains); the convergence check V7 on the example stackup's CPW without ground passes.
 
 ### V12a: CPW on a finite substrate (no backside metal): T 0, q 2 (4 cases, h 0.1–0.5 mm)
 
@@ -315,17 +315,17 @@ Reference: — (unit tests, tests/model and tests/io). Acceptance: unit tests. S
 
 ## Second reference: independent finite-difference solve
 
-A uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct solve; zero-thickness strips as Dirichlet nodes; cell-centred εr; capacitance from the field energy; grounded rectangular box), written independently of this solver by the reviewer of the reference formulas. It is not part of the npm suite, so its values are pinned in `tests/helpers/validation.ts`. Each value is extrapolated to d → 0 (observed order 0.97–1.0 on three grids, so order 1). For CPW without backside metal the box truncation matters (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z0), and slightly for CPWG (+0.10–0.14 % from box 3 to 6), so those values carry a box-size correction to an unbounded domain. Estimated uncertainty: ±0.1 % (offset stripline), ±0.2 % (embedded, box 3 × 2 mm uncorrected), ±0.3 % (CPW, CPWG).
+A uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct solve; zero-thickness strips as Dirichlet nodes; cell-centred εr; capacitance from the field energy; grounded rectangular box), written independently of this solver by the reviewer of the reference formulas. It is not part of the npm suite, so its values are pinned in `tests/helpers/validation.ts`. Each value is extrapolated to d → 0 (observed order 0.97–1.0 on three grids, so order 1). The box truncation matters for the open geometries: CPW without backside metal (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z0), embedded microstrip (box 3×2 → 6×4 mm: +0.15–0.16 % on Z0, +0.20 % on εeff, measured at covers 0.025 and 0.1 mm and applied to all four) and slightly CPWG (+0.10–0.14 % from box 3 to 6). Those values carry a box-size correction to an unbounded domain. Estimated uncertainty: ±0.1 % (offset stripline), ±0.2 % (embedded), ±0.3 % (CPW, CPWG).
 
 | Geometry | Parameters (mm) | FD Z0 (Ω) | FD εeff | Raw grid values (d = 0.01 / 0.005 / 0.0025 mm unless stated) |
 |---|---|---|---|---|
 | offset stripline | W 0.2, H1 0.1, H2 0.3, εr 4.4 | 39.536 | 4.4 | 38.697 / 39.112 / 39.322 |
 | offset stripline | W 0.1, H1 0.1, H2 0.3, εr 4 | 60.103 | 4 | 58.138 / 59.101 / 59.592 |
 | offset stripline | W 0.2, H1 0.1, H2 0.2, εr 4 | 39.128 | 4 | 38.266 / 38.696 / 38.912 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.025, εr 4.4 | 46.335 | 3.6667 | d 0.005 / 0.0025: 45.865 / 46.100; εeff 3.6681 / 3.6674 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.05, εr 4.4 | 45.294 | 3.8368 | d 0.01 / 0.005: 44.400 / 44.847; εeff 3.8364 / 3.8366 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.1, εr 4.4 | 44.141 | 4.0402 | d 0.005 / 0.0025: 43.709 / 43.925; εeff 4.0390 / 4.0396 |
-| embedded microstrip | W 0.2, H 0.1, cover 0.2, εr 4.4 | 43.187 | 4.2201 | d 0.01 / 0.005: 42.347 / 42.767; εeff 4.2175 / 4.2188 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.025, εr 4.4 | 46.432 | 3.6766 | box 3×2, d 0.005 / 0.0025: 45.865 / 46.100, εeff 3.6681 / 3.6674; box 6×4 at d 0.005: 45.936, εeff 3.6756 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.05, εr 4.4 | 45.389 | 3.8472 | box 3×2, d 0.01 / 0.005: 44.400 / 44.847, εeff 3.8364 / 3.8366 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.1, εr 4.4 | 44.234 | 4.0511 | box 3×2, d 0.005 / 0.0025: 43.709 / 43.925, εeff 4.0390 / 4.0396; box 6×4 at d 0.005: 43.778, εeff 4.0469 |
+| embedded microstrip | W 0.2, H 0.1, cover 0.2, εr 4.4 | 43.278 | 4.2315 | box 3×2, d 0.01 / 0.005: 42.347 / 42.767, εeff 4.2175 / 4.2188 |
 | CPW, no backside metal | W 0.2, G 0.1, h 0.2, εr 4.4 | 76.2 | 2.5 | box 3: 73.483 / 74.661 / 75.252, εeff 2.4948 / 2.4928 / 2.4917; box 6 / 12 at d 0.01: 73.740 / 73.804 |
 | CPW, no backside metal | W 0.15, G 0.15, h 0.1, εr 4.4 | 100.21 | 2.158 | box 3, d 0.005 / 0.0025: 98.297 / 98.987, εeff 2.1520 / 2.1510; box 6 at d 0.005: 98.709, εeff 2.1576 |
 | CPWG | W 0.2, G 0.1, h 0.2, εr 4.4 | 61.43 | 2.913 | box 3: 59.625 / 60.476 / 60.902, εeff 2.9063 / 2.9076 / 2.9082; box 6 at d 0.01: 59.706, εeff 2.9102 |

@@ -38,7 +38,7 @@ export interface Check {
 // ---------------------------------------------------------------------------- formatting
 
 export const pct = (a: number, b: number): number => (a / b - 1) * 100;
-export const sp = (x: number, d = 3): string => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(d)} %`;
+export const sp = (x: number, d = 3): string => `${Number(x.toFixed(d)) < 0 ? '−' : '+'}${Math.abs(x).toFixed(d)} %`;
 const f = (x: number, d = 3): string => x.toFixed(d);
 const range = (xs: number[], d = 3): string => {
   const lo = Math.min(...xs), hi = Math.max(...xs);
@@ -52,14 +52,26 @@ const table = (head: string[], rows: (string | number)[][]): string[] => [
 // ---------------------------------------------------------------------------- geometry
 
 /**
- * Hand-built zero-thickness cross-sections for the closed-form references.
+ * Zero-thickness cross-sections for the closed-form references.
  *
- * The Stackup model refuses copper of thickness 0 and, on an open side, turns the far copper layer of a test
- * stackup into a 'cut out' slab of the neighbouring dielectric (0.035 mm here). That slab is not part of the
- * reference geometry: through the Stackup route it made the 1e-6 mm-cover embedded line read −5.6 % against
- * plain microstrip, and it thickened every CPW substrate. These builders give exactly the reference geometry.
- * xsMatchesModel() checks that, with planes on the referenced sides, they equal buildCrossSection's output.
+ * Stripline and microstrip (and CPWG) go through the Stackup model (tests/helpers/stackups.ts) with T set to 0
+ * afterwards: the model refuses copper of thickness 0, and with planes on every referenced side it produces
+ * exactly the reference geometry.
+ *
+ * The open-side geometries (embedded microstrip, CPW without backside metal) are hand-built. On an open side the
+ * model turns the far copper layer of a stackup into a 'cut out' slab of the neighbouring dielectric (0.035 mm
+ * here), which is not part of the reference geometry: through the Stackup route it made the 1e-6 mm-cover
+ * embedded line read −5.6 % against plain microstrip, and it thickened every CPW substrate.
+ * xsMatchesModel() checks that the hand-built ones equal the model's output minus that slab.
  */
+const t0 = (xs: CrossSection): CrossSection => ({ ...xs, T: 0 });
+/** Stripline, trace H1 above the base plane and H2 below the cover plane, homogeneous er. */
+export const xsStrip = (H1: number, H2: number, er: number): CrossSection =>
+  t0(xsOf(stack([['cu', 0.035], ['d', H2, er], ['cu', 0.035, 'signal'], ['d', H1, er], ['cu', 0.035]]), sel('cu1', 'cu0', 'cu2')));
+/** Microstrip (no mask), substrate H. With a coplanar G this is CPWG. */
+export const xsMicro = (H: number, er: number): CrossSection =>
+  t0(xsOf(stack([['cu', 0.035, 'signal'], ['d', H, er], ['cu', 0.035]]), sel('cu0', null, 'cu1')));
+
 const slab = (t: number, er: number): Slab => ({ t, er, tand: 0, label: 'reference' });
 function handXs(o: {
   base: Slab[]; cover?: Slab[]; outer: boolean; baseRef: boolean; coverRef?: boolean; fillEr?: number; topology: Topology;
@@ -70,32 +82,26 @@ function handXs(o: {
     baseOpenMask: null, coverOpenMask: null, flipped: false, topology: o.topology, notes: [], warnings: [],
   };
 }
-/** Stripline, trace H1 above the base plane and H2 below the cover plane, homogeneous er. */
-export const xsStrip = (H1: number, H2: number, er: number): CrossSection => handXs({
-  base: [slab(H1, er)], cover: [slab(H2, er)], outer: false, baseRef: true, coverRef: true, fillEr: er,
-  topology: H1 === H2 ? 'stripline-symmetric' : 'stripline-asymmetric',
-});
-/** Microstrip (no mask), substrate H. With a coplanar G this is CPWG. */
-export const xsMicro = (H: number, er: number): CrossSection =>
-  handXs({ base: [slab(H, er)], outer: true, baseRef: true, topology: 'microstrip' });
-/** Embedded microstrip: substrate H to the plane, cover Hc of the same er, then air. */
+/** Embedded microstrip: substrate H to the plane, cover Hc of the same er, then air (hand-built). */
 export const xsEmbedded = (H: number, Hc: number, er: number): CrossSection => handXs({
   base: [slab(H, er)], cover: [slab(Hc, er)], outer: false, baseRef: true, coverRef: false, fillEr: er,
   topology: 'embedded-microstrip',
 });
-/** CPW without backside metal: substrate h, air below and above. */
+/** CPW without backside metal: substrate h, air below and above (hand-built). */
 export const xsCpwOpen = (h: number, er: number): CrossSection =>
   handXs({ base: [slab(h, er)], outer: true, baseRef: false, topology: 'no-reference' });
 
-/** The hand-built stripline and microstrip equal the model's cross-sections (apart from T and slab labels). */
+/** The hand-built open-side cross-sections equal the model's, apart from the far copper's 'cut out' slab, T and labels. */
 export function xsMatchesModel(): boolean {
-  const strip = xsOf(stack([['cu', 0.035], ['d', 0.15, 4], ['cu', 0.035, 'signal'], ['d', 0.25, 4], ['cu', 0.035]]), sel('cu1', 'cu0', 'cu2'));
-  const micro = xsOf(stack([['cu', 0.035, 'signal'], ['d', 0.12, 3.9], ['cu', 0.035]]), sel('cu0', null, 'cu1'));
+  const dropCut = (a: Slab[]): Slab[] => a.filter((x) => !x.label.endsWith('(cut out)'));
   const norm = (x: CrossSection): string => JSON.stringify({
-    ...x, T: 0, base: x.base.map((s) => [s.t, s.er]), cover: x.cover.map((s) => [s.t, s.er]),
+    ...x, T: 0, base: dropCut(x.base).map((s) => [s.t, s.er]), cover: dropCut(x.cover).map((s) => [s.t, s.er]),
     fill: x.fill && x.fill.er, notes: [], warnings: [],
   });
-  return norm(strip) === norm(xsStrip(0.25, 0.15, 4)) && norm(micro) === norm(xsMicro(0.12, 3.9));
+  const emb = xsOf(stack([['cu', 0.035], ['d', 0.05, 4.4], ['cu', 0.035, 'signal'], ['d', 0.1, 4.4], ['cu', 0.035]]), sel('cu1', null, 'cu2'));
+  const cpw = xsOf(stack([['cu', 0.035, 'signal'], ['d', 0.2, 4.4], ['cu', 0.035]]), sel('cu0', null, null));
+  return emb.cover.length === 2 && cpw.base.length === 2 // the slab really is there
+    && norm(emb) === norm(xsEmbedded(0.1, 0.05, 4.4)) && norm(cpw) === norm(xsCpwOpen(0.2, 4.4));
 }
 
 export function se(xs: CrossSection, line: LineGeom, q: number, dom?: number): SEResult {
@@ -119,13 +125,14 @@ function zOf(xs: CrossSection, line: LineGeom, q: number, rich = true): number {
 /**
  * Independent second reference: a uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct
  * solve; zero-thickness strips as Dirichlet nodes; cell-centred er; capacitance from the field energy; grounded
- * rectangular box), written by the Task 6a reviewer and run read-only for Task 6b. Not part of the npm suite, so
+ * rectangular box), written independently by the reviewer of the reference formulas and run read-only here. Not part of the npm suite, so
  * the values are pinned here. Each value is extrapolated to d → 0 from the two or three finest grids
  * (d = 0.01 / 0.005 / 0.0025 mm; observed order 0.97–1.0, so order 1 is used). Raw grid values are recorded in
- * docs/validation.md. The box truncation matters for CPW without backside metal (box 3 → 6 → 12 mm: +0.35 %
- * then +0.09 % on Z) and slightly for CPWG (box 3 → 6: +0.10–0.14 %), so those values carry a box-size
- * correction to an unbounded domain, estimated from these sequences. Estimated uncertainty: ±0.1 % (offset),
- * ±0.2 % (embedded: box 3 × 2 mm, uncorrected, which biases Z low), ±0.3 % (CPW, CPWG).
+ * docs/validation.md. The box truncation matters for the open geometries: CPW without backside metal
+ * (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z), embedded microstrip (box 3×2 → 6×4 mm: +0.15–0.16 % on Z,
+ * +0.20 % on εeff, measured at covers 0.025 and 0.1 and applied to all four) and slightly CPWG (box 3 → 6:
+ * +0.10–0.14 %). Those values carry a box-size correction to an unbounded domain, estimated from these
+ * sequences. Estimated uncertainty: ±0.1 % (offset stripline), ±0.2 % (embedded), ±0.3 % (CPW, CPWG).
  */
 export const FD = {
   offset: [
@@ -134,10 +141,10 @@ export const FD = {
     { W: 0.2, H1: 0.1, H2: 0.2, er: 4, z: 39.128, raw: '38.266 / 38.696 / 38.912' },
   ],
   embedded: [ // W 0.2, H 0.1, er 4.4
-    { Hc: 0.025, z: 46.335, eeff: 3.6667, raw: 'd 0.005 / 0.0025: 45.865 / 46.100; εeff 3.6681 / 3.6674' },
-    { Hc: 0.05, z: 45.294, eeff: 3.8368, raw: 'd 0.01 / 0.005: 44.400 / 44.847; εeff 3.8364 / 3.8366' },
-    { Hc: 0.1, z: 44.141, eeff: 4.0402, raw: 'd 0.005 / 0.0025: 43.709 / 43.925; εeff 4.0390 / 4.0396' },
-    { Hc: 0.2, z: 43.187, eeff: 4.2201, raw: 'd 0.01 / 0.005: 42.347 / 42.767; εeff 4.2175 / 4.2188' },
+    { Hc: 0.025, z: 46.432, eeff: 3.6766, raw: 'box 3×2, d 0.005 / 0.0025: 45.865 / 46.100, εeff 3.6681 / 3.6674; box 6×4 at d 0.005: 45.936, εeff 3.6756' },
+    { Hc: 0.05, z: 45.389, eeff: 3.8472, raw: 'box 3×2, d 0.01 / 0.005: 44.400 / 44.847, εeff 3.8364 / 3.8366' },
+    { Hc: 0.1, z: 44.234, eeff: 4.0511, raw: 'box 3×2, d 0.005 / 0.0025: 43.709 / 43.925, εeff 4.0390 / 4.0396; box 6×4 at d 0.005: 43.778, εeff 4.0469' },
+    { Hc: 0.2, z: 43.278, eeff: 4.2315, raw: 'box 3×2, d 0.01 / 0.005: 42.347 / 42.767, εeff 4.2175 / 4.2188' },
   ],
   cpwOpen: [
     { W: 0.2, G: 0.1, h: 0.2, er: 4.4, z: 76.20, eeff: 2.500, raw: 'box 3: 73.483 / 74.661 / 75.252, εeff 2.4948 / 2.4928 / 2.4917; box 6 / 12 at d 0.01: 73.740 / 73.804' },
@@ -583,7 +590,7 @@ export function v9b(): Check {
     failures,
     detail: table(['W', 'H1', 'H2', 'εr', 'Solver (Ω)', 'Formula (Ω)', 'Solver vs formula', 'FD (Ω)', 'Solver vs FD', 'Formula vs FD'], rows),
     notes: [
-      `The formula combines two half-structures, Z0 = 2·Z1·Z2/(Z1 + Z2), and neglects the fringing coupling between them (refs.ts). No accuracy is published for it in the sources available. The independent FD solve agrees with the solver within ${f(maxAbs(eF), 2)} % and puts the formula ${range(fF, 2)} off, growing with offset and W/(H1+H2) (the Task 6a review found +3 % at H1/H2 = 1/3, W/b = 0.5). The solver holds; the deviation is the formula's.`,
+      `The formula combines two half-structures, Z0 = 2·Z1·Z2/(Z1 + Z2), and neglects the fringing coupling between them (refs.ts). No accuracy is published for it in the sources available. The independent FD solve agrees with the solver within ${f(maxAbs(eF), 2)} % and puts the formula ${range(fF, 2)} off, growing with offset and W/(H1+H2) (the review of the reference formulas found +3 % at H1/H2 = 1/3, W/b = 0.5). The solver holds; the deviation is the formula's.`,
     ],
   };
 }
@@ -650,7 +657,7 @@ export function v10c(rows = embRows()): Check {
     detail: table(['Cover (mm)', 'Solver εeff', 'Formula', 'Error', 'FD', 'Solver vs FD'],
       rows.map((x, i) => [f(x.Hc, 3), f(x.r.eeff, 4), f(x.ref.eeff, 4), sp(ee[i], 2), f(x.fd.eeff, 4), sp(eF[i], 2)])),
     notes: [
-      `The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads ${range(rows.map((x) => pct(x.ref.eeff, x.fd.eeff)), 2)} against the FD (the Task 6a review found +5.4 % at Hc = H). The FD second reference agrees with the solver within ${f(Math.max(maxAbs(eF), maxAbs(rows.map((x) => pct(x.r.Z0, x.fd.z)))), 2)} % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.`,
+      `The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads ${range(rows.map((x) => pct(x.ref.eeff, x.fd.eeff)), 2)} against the FD (the review of the reference formulas found +5.4 % at Hc = H). The FD second reference agrees with the solver within ${f(Math.max(maxAbs(eF), maxAbs(rows.map((x) => pct(x.r.Z0, x.fd.z)))), 2)} % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.`,
     ],
   };
 }
@@ -667,14 +674,18 @@ export function v11(): Check {
       id: 'V11', test: `CPW without ground: substrate 20·(W+2G) = ${f(h, 1)} mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2`,
       reference: 'exact conformal map (infinitely thick substrate)',
       result: `Z0 dom 1 ${sp(ez[0])}, dom 2 ${sp(ez[1])}; εeff dom 1 ${sp(ee[0])}, dom 2 ${sp(ee[1])}`,
-      acceptance: 'Z0 ≤ 0.3 %; dom 1 vs 2 recorded', status: 'pass',
+      acceptance: 'Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %)', status: 'pass',
     },
-    failures: maxAbs(ez) <= 0.3 ? [] : [`V11 ${ez}`],
+    failures: [
+      ...(maxAbs(ez) <= 0.3 ? [] : [`V11 Z0 ${ez} %`]),
+      ...(Math.abs(ee[0]) <= 0.3 ? [] : [`V11 εeff dom 1 ${ee[0]} %`]),
+      ...(Math.abs(ee[1]) <= 1 ? [] : [`V11 εeff dom 2 ${ee[1]} % outside the recorded band`]),
+    ],
     detail: table(['dom', 'Solver Z0 (Ω)', 'Exact (Ω)', 'Error', 'Solver εeff', 'Exact', 'Error', 'Nodes (finer mesh)'],
       rs.map((x, i) => [String(x.dom), f(x.r.Z0, 4), f(ref.z0, 4), sp(ez[i]), f(x.r.eeff, 4), f(ref.eeff, 4), sp(ee[i]), String(x.r.nodes)])),
     notes: [
       `The finite-substrate formula at h = ${f(h, 1)} mm differs from the infinite one by ${sp(pct(cpwFinite(W, G, h, er).z0, ref.z0), 4)}, so the substrate is thick enough.`,
-      'Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.254 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both; the εeff error at dom 2 is recorded. The shipped analysis uses dom 1. Reported to the solver owner as a grading concern for very large open domains; the convergence check V7 on the example stackup\'s CPW without ground passes.',
+      'Dom 1 vs 2 is driven by the mesh, not by the far boundary. With h = 8 mm the open-side air depth is D = 30·h = 240 mm (480 mm at dom 2), and the grid builder integrates its grading function with a fixed 200 samples per key interval, so the first cells next to the coplanar-ground edge and above the trace come out 14× (dom 1) and 27× (dom 2) larger than hmin. Measured when this check was set up: the raw meshes converge slowly (dom 1, q 1/2/4/8: 64.52 / 70.49 / 73.39 / 74.81 Ω) and Richardson carries the result (rich(2,4) 76.29, rich(4,8) 76.23 against an exact 76.254 Ω). At dom 2 the observed order drops to about 0.84 and the order-1 Richardson overshoots, hence the larger dom 2 errors. Z0 passes at both; the εeff error at dom 2 is recorded. The shipped analysis uses dom 1. Recorded as a solver concern (mesh grading on very large open domains); the convergence check V7 on the example stackup\'s CPW without ground passes.',
     ],
   };
 }
@@ -701,7 +712,8 @@ function v12(kind: 'cpw' | 'cpwg'): Check {
     const fd = fds.find((x) => x.W === W && x.G === G && x.h === h && x.er === er);
     const zF = fd ? pct(r.Z0, fd.z) : NaN, eF = fd ? pct(r.eeff, fd.eeff) : NaN;
     if (fd) fdz.push(zF);
-    if (fd && !(Math.abs(zF) <= FD_TOL)) failures.push(`${id} ${W}/${G}/${h}: solver vs FD ${zF} %`);
+    if (fd && !(Math.abs(zF) <= FD_TOL)) failures.push(`${id} ${W}/${G}/${h}: solver vs FD Z0 ${zF} %`);
+    if (fd && !(Math.abs(eF) <= FD_TOL)) failures.push(`${id} ${W}/${G}/${h}: solver vs FD εeff ${eF} %`);
     if (Math.abs(a) > 1) {
       if (!fd) failures.push(`${id} ${W}/${G}/${h}: ${a} % beyond ~1 % with no second reference`);
       else {

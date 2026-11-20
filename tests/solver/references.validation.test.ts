@@ -28,7 +28,7 @@ const cases: [string, () => Check, Status][] = [
 ];
 
 describe('reference validations', () => {
-  it('hand-built T = 0 cross-sections equal the model\'s where planes bound the referenced sides', () => {
+  it('hand-built open-side T = 0 cross-sections equal the model\'s minus the far copper\'s cut-out slab', () => {
     expect(xsMatchesModel()).toBe(true);
   });
   for (const [name, fn, status] of cases) {

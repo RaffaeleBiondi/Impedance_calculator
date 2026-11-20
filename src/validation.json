@@ -107,7 +107,7 @@
     "id": "V10b",
     "test": "Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2)",
     "reference": "Wadell / IPC-2141A embedded approximation (secondary source: \"estimated ±3 %\")",
-    "result": "solver vs formula +1.10 % … +2.50 %; solver vs independent FD +0.19 % … +0.21 %",
+    "result": "solver vs formula +1.10 % … +2.50 %; solver vs independent FD −0.02 % … +0.00 %",
     "acceptance": "±3 %",
     "status": "pass"
   },
@@ -115,7 +115,7 @@
     "id": "V10c",
     "test": "Embedded microstrip εeff, cover 0.025–0.2 mm (same cases)",
     "reference": "Wadell / IPC-2141A embedded approximation (no εeff accuracy stated)",
-    "result": "solver vs formula −4.92 % … −2.28 %; solver vs independent FD +0.18 % … +0.19 %",
+    "result": "solver vs formula −4.92 % … −2.28 %; solver vs independent FD −0.09 % … −0.08 %",
     "acceptance": "formula: none stated, deviation recorded (band ≤ 6 %); FD second reference ≤ 0.5 %",
     "status": "deviation-recorded"
   },
@@ -124,7 +124,7 @@
     "test": "CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2",
     "reference": "exact conformal map (infinitely thick substrate)",
     "result": "Z0 dom 1 +0.053 %, dom 2 +0.164 %; εeff dom 1 +0.140 %, dom 2 +0.608 %",
-    "acceptance": "Z0 ≤ 0.3 %; dom 1 vs 2 recorded",
+    "acceptance": "Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff recorded (band ≤ 1 %)",
     "status": "pass"
   },
   {
