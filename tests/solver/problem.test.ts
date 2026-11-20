@@ -172,6 +172,22 @@ describe('grid-line invariant across topologies', () => {
     expect(p.diel.every((d) => d.y0 >= D - 1e-12)).toBe(true);
     expect(p.diel.some((d) => Math.abs(d.y0 - D) < 1e-12 && d.er === ex.maskTop.er)).toBe(true);
   });
+  it('open base is the exact y-mirror of open cover (base above vs below, one reference)', () => {
+    const mk = (base: 'above' | 'below'): CrossSection => {
+      const s = stack([['cu', 0.035, 'signal'], ['d', 0.2, 4], ['cu', 0.018, 'signal'], ['d', 0.2, 4], ['cu', 0.035]],
+        { t: 0.01, er: 3.3, tand: 0.02 });
+      (s.layers[2] as { base?: string }).base = base;
+      return xsOf(s, sel('cu1', null, 'cu2'));
+    };
+    const up = mk('above'), dn = mk('below');
+    expect([up.baseRef, up.coverRef, dn.baseRef, dn.coverRef]).toEqual([false, true, true, false]);
+    const se = (xs: CrossSection, line: LineGeom): number => { const b = makeBuild(xs, line); return richSE(b, 1, b.order).Z0; };
+    const df = (xs: CrossSection): number => { const b = makeBuild(xs, { W: 0.12, S: 0.2 }); return richDiff(b, 1, b.order).Zdiff; };
+    expect(rel(se(up, { W: 0.15 }), se(dn, { W: 0.15 }))).toBeLessThanOrEqual(1e-9);
+    expect(rel(df(up), df(dn))).toBeLessThanOrEqual(1e-9);
+    // a trapezoid is not mirror-symmetric: its wide side sits on the base, nearer the plane when the base is referenced
+    expect(se(dn, { W: 0.15, Wtop: 0.14 })).toBeLessThan(se(up, { W: 0.15, Wtop: 0.14 }));
+  });
   it('T = 0 cross-sections are supported', () => {
     const xs = { ...xsCu5(), T: 0 };
     const r = richSE(makeBuild(xs, { W: 0.135, Wtop: 0.12 }), 1, richOrder(0));

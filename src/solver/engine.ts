@@ -20,6 +20,8 @@ export const NO_REFERENCE_SE = 'No reference: single-ended needs a plane or copl
  * fall in 1.24–1.45 (rectangles: 1.42–1.56). Order 1.35 halves the worst rich(1,2) vs rich(2,4) and
  * rich(2,4) vs rich(4,8) spreads compared with 1.5 (0.024 % / 0.007 % against 0.052 % / 0.014 %).
  * The slice keys pin the mesh near the sidewall independently of q, so the mesh does not refine uniformly.
+ * Calibrated at the default 8 slices (16 slices gave an erratic 1.68 / 1.13 on F.Cu SE); applied to any count.
+ * Open-boundary rectangles (embedded microstrip, CPW without ground) measure 1.50–1.56 and keep 1.5.
  */
 export const TRAP_ORDER = 1.35;
 

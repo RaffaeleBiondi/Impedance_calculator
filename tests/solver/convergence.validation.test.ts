@@ -84,6 +84,19 @@ describe('V13: trapezoid slices and observed mesh order', () => {
       expect(pr).toBeLessThan(1.6);
     }, 60_000);
   }
+  for (const c of [
+    { name: 'embedded microstrip (In2, ref In1)', xs: () => xsOf(ex, sel('cu2', 'cu1', null)), line: { W: 0.15 } },
+    { name: 'CPW no ground (F.Cu)', xs: () => xsOf(ex, sel('cu0', null, null)), line: { W: 0.2, G: 0.15 } },
+  ]) {
+    it(`open boundary, ${c.name}: observed order stays at 1.5`, () => {
+      const xs = c.xs();
+      const [z1, z2, z4] = [1, 2, 4].map((q) => z(xs, c.line, q, false));
+      const p = Math.log2((z1 - z2) / (z2 - z4));
+      console.log(`V13 order  open ${c.name.padEnd(30)} rectangle p = ${p.toFixed(3)}`);
+      expect(p).toBeGreaterThan(1.4);
+      expect(p).toBeLessThan(1.6);
+    }, 60_000);
+  }
   it('CPW no ground: domain size dom 1 vs 2 (recorded)', () => {
     const xs = xsOf(ex, sel('cu0', null, null));
     const line = { W: 0.2, G: 0.15 };
