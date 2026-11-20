@@ -5,8 +5,11 @@
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #16140f; --panel: #1f1c17; --ink: #ece6dc; --muted: #a39a8c; --line: #3a342b; --accent: #d9955a; --accent-ink: #1a1208; --warn: #ff8f6b; --sel: #3a2a1a; }
+  :root:not([data-theme="light"]) { --bg: #16140f; --panel: #1f1c17; --ink: #ece6dc; --muted: #a39a8c; --line: #3a342b; --accent: #d9955a; --accent-ink: #1a1208; --warn: #ff8f6b; --sel: #3a2a1a; }
 }
+:root[data-theme="dark"] { --bg: #16140f; --panel: #1f1c17; --ink: #ece6dc; --muted: #a39a8c; --line: #3a342b; --accent: #d9955a; --accent-ink: #1a1208; --warn: #ff8f6b; --sel: #3a2a1a; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
 .app { max-width: 1400px; margin: 0 auto; padding: 16px; }
@@ -58,3 +61,9 @@ table.mat td.src { white-space: normal; max-width: 22em; font-size: 12px; }
 .matform input, .matform select { width: 100%; }
 .matpick { display: inline-flex; gap: 2px; }
 .matpick select { max-width: 11em; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
+.top .titles { flex: 1; min-width: 14em; }
+.top .titles p { margin-bottom: 0; }
+.themetoggle { display: inline-flex; gap: 2px; }
+.notes li { margin-bottom: 6px; }
+.status-pass { color: #2e7d32; } .status-dev { color: var(--accent); } .status-nv { color: var(--muted); }

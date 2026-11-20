@@ -2,6 +2,7 @@ export const KEYS = {
   autosave: 'lotO.autosave',
   saved: 'lotO.saved',
   materials: 'lotO.materials',
+  theme: 'lotO.theme',
 } as const;
 
 export const storage = {
