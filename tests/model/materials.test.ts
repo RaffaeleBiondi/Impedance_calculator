@@ -37,4 +37,13 @@ describe('material presets', () => {
       expect(m?.source).toMatch(/Revision I \(24 Feb 2026\)/);
     }
   });
+  it('cites the official Rogers RO4000 data sheet for the Rogers presets, values unchanged', () => {
+    const got = ['rogers-ro4350b', 'rogers-ro4003c'].map((id) => PRESETS.find((m) => m.id === id));
+    expect(got.map((m) => [m?.er, m?.tand])).toEqual([[3.66, 0.0037], [3.55, 0.0027]]);
+    for (const m of got) {
+      expect(m?.source).toMatch(/Rogers PUB 92-004/);
+      expect(m?.source).toMatch(/https:\/\/www\.rogerscorp\.com\//);
+      expect(m?.source).not.toMatch(/hosted by|not the Rogers site/i);
+    }
+  });
 });

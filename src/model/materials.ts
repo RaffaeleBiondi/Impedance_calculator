@@ -108,8 +108,9 @@ export const PRESETS: Material[] = [
     tand: 0.0037,
     freq: 'Dk 8-40 GHz (design); tanδ 10 GHz',
     source:
-      'Rogers RO4000 Series High Frequency Circuit Materials data sheet (PUB 92-004, rev 101916; third-party copy, ' +
-      'not the Rogers site), property table: "Dielectric Constant, εr Design" = 3.66 ' +
+      'Rogers RO4000 Series High Frequency Circuit Materials data sheet (Rogers PUB 92-004, revised 080322; ' +
+      'https://www.rogerscorp.com/-/media/project/rogerscorp/documents/advanced-electronics-solutions/english/data-sheets/ro4000-laminates-ro4003c-and-ro4350b---data-sheet.pdf), ' +
+      'property table: "Dielectric Constant, εr Design" = 3.66 ' +
       '(differential phase length method, 8 to 40 GHz; the process Dk is 3.48 ± 0.05 at 10 GHz and is not used for impedance work); ' +
       '"Dissipation Factor tan δ" = 0.0037 at 10 GHz/23°C (0.0031 at 2.5 GHz).',
     preset: true,
@@ -123,8 +124,9 @@ export const PRESETS: Material[] = [
     tand: 0.0027,
     freq: 'Dk 8-40 GHz (design); tanδ 10 GHz',
     source:
-      'Rogers RO4000 Series High Frequency Circuit Materials data sheet (PUB 92-004, rev 101916; third-party copy, ' +
-      'not the Rogers site), property table: "Dielectric Constant, εr Design" = 3.55 ' +
+      'Rogers RO4000 Series High Frequency Circuit Materials data sheet (Rogers PUB 92-004, revised 080322; ' +
+      'https://www.rogerscorp.com/-/media/project/rogerscorp/documents/advanced-electronics-solutions/english/data-sheets/ro4000-laminates-ro4003c-and-ro4350b---data-sheet.pdf), ' +
+      'property table: "Dielectric Constant, εr Design" = 3.55 ' +
       '(differential phase length method, 8 to 40 GHz; the process Dk is 3.38 ± 0.05 at 10 GHz and is not used for impedance work); ' +
       '"Dissipation Factor tan δ" = 0.0027 at 10 GHz/23°C (0.0021 at 2.5 GHz).',
     preset: true,

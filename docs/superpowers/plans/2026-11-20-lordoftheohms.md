@@ -640,7 +640,7 @@ Use the `frontend-design` / `ui-ux-pro-max` skills for visual decisions and `dat
 - [ ] **Step 2:** Run → FAIL.
 - [ ] **Step 3:** Implement.
 - [ ] **Step 4:** Run → PASS.
-- [ ] **Step 5:** Search the built bundle for forbidden strings: `grep -riE -f reference/forbidden.txt dist src` → no matches.
+- [ ] **Step 5:** Search for forbidden strings with the local, untracked pattern list: `grep -riE -f reference/forbidden.txt dist src docs tests scripts` → no matches.
 - [ ] **Step 6:** Commit `feat(ui): KiCad import with role review, assumptions and validation section`.
 
 ## Phase E — Ship

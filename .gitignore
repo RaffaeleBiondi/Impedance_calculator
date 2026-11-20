@@ -43,3 +43,11 @@ Thumbs.db
 
 # VS Code Local History extension
 .history/
+
+# Python bytecode (FD reference scripts)
+__pycache__/
+*.pyc
+
+# Local-only material (never committed)
+/reference/
+/.superpowers/
