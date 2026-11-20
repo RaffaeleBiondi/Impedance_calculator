@@ -61,7 +61,7 @@ export function MaterialLibrary({ onClose }: { onClose: () => void }) {
             </tbody>
           </table>
         </div>
-        <p className="hint">* user material, stored in this browser only. Presets are read-only; duplicate one to change it.</p>
+        <p className="hint">* user material (this browser only). Duplicate a preset to edit.</p>
         {edit ? (
           <MaterialForm m={edit} onCancel={() => setEdit(null)} onSave={(m) => { materialsApi.saveUser(m); setEdit(null); }} />
         ) : (

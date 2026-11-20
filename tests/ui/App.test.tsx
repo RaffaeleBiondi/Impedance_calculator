@@ -37,3 +37,14 @@ describe('row inputs keep focus', () => {
     expect(screen.getByLabelText('Thickness of d0')).toBe(th);
   });
 });
+
+describe('assumptions toggle', () => {
+  it('is closed by default and opens on summary click', () => {
+    render(<App />);
+    const d = screen.getByLabelText('Assumptions and validation') as HTMLDetailsElement;
+    expect(d.tagName).toBe('DETAILS');
+    expect(d.open).toBe(false);
+    fireEvent.click(screen.getByText('Assumptions & validation'));
+    expect(d.open).toBe(true);
+  });
+});

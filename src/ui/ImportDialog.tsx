@@ -48,9 +48,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           <h3>Import a stackup</h3>
           <button type="button" onClick={onClose} aria-label="Close">Close</button>
         </header>
-        <p className="hint">
-          Choose a KiCad board (.kicad_pcb, KiCad 6 to 9) or a stackup JSON file. The file is read in your browser and never uploaded.
-        </p>
+        <p className="hint">.kicad_pcb or stackup .json. Stays in your browser.</p>
         <input type="file" aria-label="Stackup file" accept=".kicad_pcb,.json,application/json"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.target.value = ''; }} />
         {errors.length > 0 && (
