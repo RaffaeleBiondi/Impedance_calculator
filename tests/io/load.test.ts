@@ -44,3 +44,13 @@ describe('loadInitialState', () => {
     }
   });
 });
+
+describe('loadInitialState both invalid', () => {
+  it('falls to example with a notice', () => {
+    const s: any = structuredClone(defaultAppState());
+    s.calc.W = 0;
+    const r = loadInitialState('#s=garbage', memStore({ 'lotO.autosave': s }));
+    expect(r.source).toBe('example');
+    expect(r.notice).toBeTruthy();
+  });
+});

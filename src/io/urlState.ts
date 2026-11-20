@@ -8,7 +8,9 @@ type Dec = { ok: true; state: AppState } | { ok: false; error: string };
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
-const numOrNull = (v: unknown) => v === null || num(v);
+const pos = (v: unknown) => num(v) && (v as number) > 0;
+const nonNeg = (v: unknown) => num(v) && (v as number) >= 0;
+const nonNegOrNull = (v: unknown) => v === null || nonNeg(v);
 const strOrNull = (v: unknown) => v === null || typeof v === 'string';
 
 /** Validate an unknown value as AppState. Never throws. */
@@ -25,10 +27,11 @@ export function checkAppState(v: unknown): Dec {
     if (!strOrNull(c.refBelow)) bad.push('refBelow');
     if (c.type !== 'se' && c.type !== 'diff') bad.push('type');
     for (const k of ['cpw', 'compact'] as const) if (typeof c[k] !== 'boolean') bad.push(k);
-    for (const k of ['W', 'S', 'G', 'target', 'fmin', 'tol', 'freqGHz'] as const) if (!num(c[k])) bad.push(k);
+    for (const k of ['W', 'target', 'fmin', 'tol', 'freqGHz'] as const) if (!pos(c[k])) bad.push(k);
+    for (const k of ['S', 'G'] as const) if (!nonNeg(c[k])) bad.push(k);
     if (c.q !== 1 && c.q !== 2) bad.push('q');
-    if (!numOrNull(c.L1)) bad.push('L1');
-    if (!numOrNull(c.L2)) bad.push('L2');
+    if (!nonNegOrNull(c.L1)) bad.push('L1');
+    if (!nonNegOrNull(c.L2)) bad.push('L2');
     if (bad.length) return { ok: false, error: `Invalid calculator fields: ${bad.join(', ')}` };
     const ids = new Set(coppers(st.stackup).map((l) => l.id));
     const calc = c as unknown as CalcState;
@@ -42,15 +45,18 @@ export function checkAppState(v: unknown): Dec {
       const rule = isObj(k) ? k.rule : null;
       const ruleOk = isObj(rule) && (
         rule.kind === 'compact-at-target'
-        || (rule.kind === 'fixed-gap' && num(rule.gap))
-        || (rule.kind === 'fixed-pitch' && num(rule.pitch)));
+        || (rule.kind === 'fixed-gap' && pos(rule.gap))
+        || (rule.kind === 'fixed-pitch' && pos(rule.pitch)));
       if (!isObj(k) || typeof k.id !== 'string' || typeof k.name !== 'string'
-        || (k.type !== 'se' && k.type !== 'diff') || !num(k.target) || !ruleOk || !numOrNull(k.G)) {
+        || (k.type !== 'se' && k.type !== 'diff') || !pos(k.target) || !ruleOk || !nonNegOrNull(k.G)) {
         return { ok: false, error: 'Invalid impedance class' };
       }
     }
     if (!Array.isArray(v.tableLayers) || v.tableLayers.some((x) => typeof x !== 'string')) {
       return { ok: false, error: 'Invalid table layers' };
+    }
+    for (const t of v.tableLayers as string[]) {
+      if (!ids.has(t)) return { ok: false, error: `Table layer "${t}" not in stackup` };
     }
     return {
       ok: true,

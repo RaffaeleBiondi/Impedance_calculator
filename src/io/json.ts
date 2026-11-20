@@ -28,11 +28,33 @@ export function checkStackup(v: unknown): Res {
     }
     if (errors.length) return { ok: false, errors };
     const layers = v.layers as unknown[];
+    const isEtch = (r: unknown) => isObj(r) && (r.by === 'fraction' || r.by === 'factor')
+      && typeof r.value === 'number' && Number.isFinite(r.value) && r.value > 0;
     layers.forEach((l, i) => {
       if (!isObj(l) || (l.kind !== 'copper' && l.kind !== 'dielectric') || typeof l.id !== 'string') {
         errors.push(`Layer #${i + 1} is malformed (needs kind copper|dielectric and an id)`);
+        return;
+      }
+      const id = l.id;
+      if (l.kind === 'copper') {
+        if (typeof l.name !== 'string') errors.push(`Copper layer "${id}": name must be a string`);
+        if (l.role !== 'signal' && l.role !== 'plane' && l.role !== 'mixed') {
+          errors.push(`Copper layer "${id}": role must be signal, plane or mixed`);
+        }
+        if (l.base !== undefined && l.base !== 'auto' && l.base !== 'above' && l.base !== 'below') {
+          errors.push(`Copper layer "${id}": base must be auto, above or below`);
+        }
+        if (l.etchOverride !== undefined && !isEtch(l.etchOverride)) {
+          errors.push(`Copper layer "${id}": etchOverride needs by fraction|factor and a value > 0`);
+        }
+      } else {
+        if (typeof l.material !== 'string') errors.push(`Dielectric layer "${id}": material must be a string`);
+        if (l.type !== 'core' && l.type !== 'prepreg') {
+          errors.push(`Dielectric layer "${id}": type must be core or prepreg`);
+        }
       }
     });
+    if (!isEtch(et.rule)) errors.push('Stackup etch rule needs by fraction|factor and a value > 0');
     if (errors.length) return { ok: false, errors };
     const s = v as unknown as Stackup;
     const issues = validateStackup(s).filter((x) => x.level === 'error');

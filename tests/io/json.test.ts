@@ -28,3 +28,27 @@ describe('stackup JSON', () => {
     expect(parseStackupJson('null').ok).toBe(false);
   });
 });
+
+describe('malformed layers', () => {
+  const run = (mut: (o: any) => void) => {
+    const o = JSON.parse(serializeStackup(exampleStackup()));
+    mut(o);
+    return parseStackupJson(JSON.stringify(o));
+  };
+  const cu = (o: any) => o.layers.find((l: any) => l.kind === 'copper');
+  const di = (o: any) => o.layers.find((l: any) => l.kind === 'dielectric');
+  it.each([
+    ['missing role', (o: any) => { delete cu(o).role; }],
+    ['bad role', (o: any) => { cu(o).role = 'ground'; }],
+    ['bad dielectric type', (o: any) => { di(o).type = 'foil'; }],
+    ['missing dielectric type', (o: any) => { delete di(o).type; }],
+    ['etchOverride value 0', (o: any) => { cu(o).etchOverride = { by: 'fraction', value: 0 }; }],
+    ['etchOverride NaN-ish', (o: any) => { cu(o).etchOverride = { by: 'factor', value: null }; }],
+    ['etchOverride bad by', (o: any) => { cu(o).etchOverride = { by: 'x', value: 1 }; }],
+    ['non-string name', (o: any) => { cu(o).name = 5; }],
+    ['non-string material', (o: any) => { di(o).material = 5; }],
+    ['maskTop not object', (o: any) => { o.maskTop = 3; }],
+    ['mask missing t', (o: any) => { delete o.maskTop.t; }],
+    ['etch rule value negative', (o: any) => { o.etch.rule.value = -1; }],
+  ])('rejects %s', (_n, m) => { expect(run(m).ok).toBe(false); });
+});
