@@ -140,4 +140,25 @@ describe('SolverPool', () => {
     await expect(pool.run(job(5)).promise).rejects.toThrow('solver worker failed to start');
     pool.dispose();
   });
+
+  it('runs calculator jobs ahead of queued batch jobs, FIFO among themselves', async () => {
+    const made: FakeWorker[] = [];
+    const pool = new SolverPool(1, () => { const w = new FakeWorker(false); made.push(w); return w; });
+    const w = made[0];
+    const reply = () => { const m = w.received[w.received.length - 1]; w.onmessage?.({ data: { id: m.id, ok: true, res: m.job.op } }); };
+    const batch = pool.runBatch([1, 2, 3].map(job)); // job 1 starts, 2 and 3 queue
+    const a = pool.run({ op: 'analyze', req: {} } as unknown as Job);
+    const f = pool.run({ op: 'findW', req: {}, target: 50 } as unknown as Job);
+    const t = pool.run({ op: 'tableCell', req: {} } as unknown as Job);
+    const c = pool.run({ op: 'compact', req: {} } as unknown as Job);
+    const order: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const m = w.received[w.received.length - 1];
+      order.push(m.job.op === 'sweepPoint' ? `sweep${m.job.value}` : m.job.op);
+      reply();
+    }
+    expect(order).toEqual(['sweep1', 'analyze', 'findW', 'compact', 'sweep2', 'sweep3', 'tableCell']);
+    await Promise.all([batch.promise, a.promise, f.promise, t.promise, c.promise]);
+    pool.dispose();
+  });
 });
