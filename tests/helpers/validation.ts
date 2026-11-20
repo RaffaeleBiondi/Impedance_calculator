@@ -125,7 +125,7 @@ function zOf(xs: CrossSection, line: LineGeom, q: number, rich = true): number {
 /**
  * Independent second reference: a uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct
  * solve; zero-thickness strips as Dirichlet nodes; cell-centred er; capacitance from the field energy; grounded
- * rectangular box), written independently by the reviewer of the reference formulas. The scripts are in
+ * rectangular box), written independently as an independent finite-difference solve. The scripts are in
  * scripts/fd-reference/ (optional, Python with numpy and scipy); they are not part of the npm suite, so the
  * values are pinned here. Grid steps d = 0.01 / 0.005 / 0.0025 mm.
  * - Extrapolation to d → 0 (`fit`): from three grids where all three resolve the geometry (observed order
@@ -596,7 +596,7 @@ export function v9b(): Check {
     detail: table(['W', 'H1', 'H2', 'εr', 'Solver (Ω)', 'Formula (Ω)', 'Solver vs formula', 'FD (Ω)', 'Solver vs FD', 'Formula vs FD'], rows),
     notes: [
       'Only the uncorrected term is compared: Z0 = 2·Z1·Z2/(Z1 + Z2), the parallel combination of two centred-stripline halves, which neglects the fringing coupling between them. The published Wadell / IPC-2141A formula adds a correction term ΔZ0,air for exactly that coupling, but its printed form could not be verified in an open source (the one reproduction found contains an evident typo), so it is left out (refs.ts). This row therefore records the error of the uncorrected term, not of the full published formula.',
-      `The independent FD solve agrees with the solver within ${f(maxAbs(eF), 2)} % and puts the uncorrected term ${range(fF, 2)} high: ${FD.offset.map((c, i) => `${sp(fF[i], 2)} at W ${c.W}, H2/H1 = ${f(c.H2 / c.H1, 0)}`).join(', ')}. The error is larger at the stronger offset; at the same offset it is larger for the narrower trace. An independent image-Green's-function method-of-moments check by the reviewer (not pinned here) also agreed with the solver to about 0.05 %. The solver holds; the deviation is the uncorrected term's.`,
+      `The independent FD solve agrees with the solver within ${f(maxAbs(eF), 2)} % and puts the uncorrected term ${range(fF, 2)} high: ${FD.offset.map((c, i) => `${sp(fF[i], 2)} at W ${c.W}, H2/H1 = ${f(c.H2 / c.H1, 0)}`).join(', ')}. The error is larger at the stronger offset; at the same offset it is larger for the narrower trace. An independent image-Green's-function method-of-moments check agreed within 0.05 % (not pinned here). The solver holds; the deviation is the uncorrected term's.`,
     ],
   };
 }
@@ -663,7 +663,7 @@ export function v10c(rows = embRows()): Check {
     detail: table(['Cover (mm)', 'Solver εeff', 'Formula', 'Error', 'FD', 'Solver vs FD'],
       rows.map((x, i) => [f(x.Hc, 3), f(x.r.eeff, 4), f(x.ref.eeff, 4), sp(ee[i], 2), f(x.fd.eeff, 4), sp(eF[i], 2)])),
     notes: [
-      `The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads ${range(rows.map((x) => pct(x.ref.eeff, x.fd.eeff)), 2)} against the FD (the review of the reference formulas found +5.4 % at Hc = H). The FD second reference agrees with the solver within ${f(Math.max(maxAbs(eF), maxAbs(rows.map((x) => pct(x.r.Z0, x.fd.z)))), 2)} % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.`,
+      `The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads ${range(rows.map((x) => pct(x.ref.eeff, x.fd.eeff)), 2)} against the FD (an independent finite-difference check found +5.4 % at Hc = H). The FD second reference agrees with the solver within ${f(Math.max(maxAbs(eF), maxAbs(rows.map((x) => pct(x.r.Z0, x.fd.z)))), 2)} % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.`,
     ],
   };
 }

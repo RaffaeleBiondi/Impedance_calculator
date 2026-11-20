@@ -4,6 +4,7 @@ import { usePool } from './usePool';
 import { LenInput } from './LenInput';
 import { SweepChart, type SweepPoint } from './SweepChart';
 import { buildReq } from './reqs';
+import { displayText } from './synthText';
 import type { AnalyzeResult } from '../solver/engine';
 
 const zOf = (r: AnalyzeResult): number | null => (!r.ok ? null : r.kind === 'se' ? r.r.Z0 : r.r.Zdiff);
@@ -61,7 +62,7 @@ export function Sweep() {
       .then((rs) => {
         setPts(xs.map((x, i) => ({ x, z: zOf(rs[i]) })));
         const bad = rs.find((r) => !r.ok);
-        if (bad && !bad.ok) setErr(bad.error);
+        if (bad && !bad.ok) setErr(displayText(bad.error, state.unit));
       })
       .catch((e) => { if (e !== 'cancelled') setErr(e instanceof Error ? e.message : String(e)); })
       .finally(() => { setProg(null); cancelRef.current = null; });

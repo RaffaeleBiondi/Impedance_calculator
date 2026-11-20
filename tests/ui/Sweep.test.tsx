@@ -83,4 +83,17 @@ describe('Sweep invalidation', () => {
     expect(Number((screen.getByLabelText('Sweep from') as HTMLInputElement).value)).toBeCloseTo(W * 0.5, 6);
     expect(Number((screen.getByLabelText('Sweep to') as HTMLInputElement).value)).toBeCloseTo(W * 2, 6);
   });
+
+  it('shows a failed point\'s error in the display unit (mil), not the worker mm text', async () => {
+    const s = defaultAppState();
+    s.unit = 'mil';
+    render(<StoreProvider initial={s}><Grab /><Sweep /></StoreProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Run sweep' }));
+    const b = h.batches[0];
+    const bad = { ok: false, error: 'Etched top width W_top = 0.0100 mm is not positive: widen the trace or check the etch rule' };
+    await act(async () => { b.d.resolve(b.jobs.map((_, i) => (i === 0 ? bad : ok(50)))); });
+    const msg = screen.getByRole('status');
+    expect(msg.textContent).toContain('W_top = 0.39 mil is not positive');
+    expect(msg.textContent).not.toMatch(/\bmm\b/);
+  });
 });

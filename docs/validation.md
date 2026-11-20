@@ -206,7 +206,7 @@ Reference: uncorrected offset-stripline term 2·Z1·Z2/(Z1+Z2) (Wadell / IPC-214
 
 Only the uncorrected term is compared: Z0 = 2·Z1·Z2/(Z1 + Z2), the parallel combination of two centred-stripline halves, which neglects the fringing coupling between them. The published Wadell / IPC-2141A formula adds a correction term ΔZ0,air for exactly that coupling, but its printed form could not be verified in an open source (the one reproduction found contains an evident typo), so it is left out (refs.ts). This row therefore records the error of the uncorrected term, not of the full published formula.
 
-The independent FD solve agrees with the solver within 0.05 % and puts the uncorrected term +1.18 % … +3.59 % high: +2.99 % at W 0.2, H2/H1 = 3, +3.59 % at W 0.1, H2/H1 = 3, +1.18 % at W 0.2, H2/H1 = 2. The error is larger at the stronger offset; at the same offset it is larger for the narrower trace. An independent image-Green's-function method-of-moments check by the reviewer (not pinned here) also agreed with the solver to about 0.05 %. The solver holds; the deviation is the uncorrected term's.
+The independent FD solve agrees with the solver within 0.05 % and puts the uncorrected term +1.18 % … +3.59 % high: +2.99 % at W 0.2, H2/H1 = 3, +3.59 % at W 0.1, H2/H1 = 3, +1.18 % at W 0.2, H2/H1 = 2. The error is larger at the stronger offset; at the same offset it is larger for the narrower trace. An independent image-Green's-function method-of-moments check agreed within 0.05 % (not pinned here). The solver holds; the deviation is the uncorrected term's.
 
 ### V10a: Embedded microstrip, limit: cover 1e-6 mm vs plain microstrip (T 0, H 0.1, εr 4.4, q 2)
 
@@ -239,7 +239,7 @@ Reference: Wadell / IPC-2141A embedded approximation (no εeff accuracy stated).
 | 0.100 | 4.0477 | 4.2571 | −4.92 % | 4.0511 | −0.08 % |
 | 0.200 | 4.2277 | 4.3807 | −3.49 % | 4.2315 | −0.09 % |
 
-The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads +2.25 % … +5.08 % against the FD (the review of the reference formulas found +5.4 % at Hc = H). The FD second reference agrees with the solver within 0.09 % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.
+The approximation only reweights the surface-microstrip εeff with exp(−2·Hc/H). Its Z0 stays within the ±3 % that a secondary source quotes, but its εeff reads +2.25 % … +5.08 % against the FD (an independent finite-difference check found +5.4 % at Hc = H). The FD second reference agrees with the solver within 0.09 % on both Z0 and εeff, so the solver holds and the deviation is the approximation's. Delay (√εeff) inherits half of it.
 
 ### V11: CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2
 
@@ -328,7 +328,7 @@ Reference: — (unit tests, tests/model and tests/io). Acceptance: unit tests. S
 
 ## Second reference: independent finite-difference solve
 
-A uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct solve; zero-thickness strips as Dirichlet nodes; cell-centred εr; capacitance from the field energy; grounded rectangular box), written independently of this solver by the reviewer of the reference formulas. The scripts are in `scripts/fd-reference/` (optional: Python with numpy and scipy; not part of the build). Its values are pinned in `tests/helpers/validation.ts`.
+A uniform-grid 5-point finite-difference Laplace solve (scipy sparse direct solve; zero-thickness strips as Dirichlet nodes; cell-centred εr; capacitance from the field energy; grounded rectangular box), written independently of this solver as an independent finite-difference solve. The scripts are in `scripts/fd-reference/` (optional: Python with numpy and scipy; not part of the build). Its values are pinned in `tests/helpers/validation.ts`.
 
 - **Extrapolation to d → 0.** Where three grids (d = 0.01 / 0.005 / 0.0025 mm) all resolve the geometry, the observed order (0.97–1.0) is used. Several deviation cases use only two grids with order 1 assumed: the coarsest grid puts some strip, slot or cover edges off the grid, and a grid finer than 0.0025 mm (0.005 mm for two covers) was not run. The "Extrapolation" column says which.
 - **Box-size correction.** The grounded box truncates the open geometries: CPW without backside metal (box 3 → 6 → 12 mm: +0.35 % then +0.09 % on Z0), embedded microstrip (box 3×2 → 6×4 mm: +0.15–0.16 % on Z0, +0.20 % on εeff, measured at covers 0.025 and 0.1 mm and applied to all four) and slightly CPWG (+0.10–0.14 % from box 3 to 6). The corrections applied to an unbounded domain are in the "Box correction" column.
