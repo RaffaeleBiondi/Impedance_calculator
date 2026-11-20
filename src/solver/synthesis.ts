@@ -201,11 +201,22 @@ export function compactWithinTol(
   const zw = clamped((W) => zOf(withW(req, W)), lim, 0.8);
   const zdw = clamped((W) => zOf(withWS(req, W, lim)), lim, 0.8);
   const zds = clamped((S) => zOf(withWS(req, lim, S)), lim, 0.8);
+  const zd2 = (W: number, S: number): number => {
+    let w = W, s = S;
+    for (let k = 0; k < 40; k++) {
+      try { return zOf(withWS(req, w, s)); } catch (e) {
+        if (!(e instanceof EvalError) || e.message === NO_REFERENCE_SE || k === 39) throw e;
+        w = lim + (w - lim) * 0.8; s = lim + (s - lim) * 0.8;
+        if (w - lim < 1e-9 && s - lim < 1e-9) throw e;
+      }
+    }
+    throw new EvalError('No valid geometry in the search range');
+  };
   try {
     c = compact(
       { target: o.target, tol: o.tol, diff: isDiff, wmin: lim, smin: lim, step: o.step ?? 0.005 },
       isDiff ? undefined : zw,
-      isDiff ? (W, S) => zOf(withWS(req, W, S)) : undefined,
+      isDiff ? zd2 : undefined,
     );
   } catch (e) { return fail(e, req); }
   if (!c.ok) {

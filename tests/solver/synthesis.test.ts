@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 let forceTooLarge = false;
+let refuse: ((l: { W: number; S?: number }) => boolean) | null = null;
 vi.mock('../../src/solver/engine', async (orig) => {
   const m = await orig<typeof import('../../src/solver/engine')>();
   return {
     ...m,
     analyze: (req: Parameters<typeof m.analyze>[0]) =>
-      forceTooLarge ? { ok: false as const, error: 'Geometry too large for the solver: 999999 mesh nodes exceed the 400000 cap' } : m.analyze(req),
+      forceTooLarge || (refuse && refuse(req.line)) ? { ok: false as const, error: 'Geometry too large for the solver: 999999 mesh nodes exceed the 400000 cap' } : m.analyze(req),
   };
 });
 import type { Selection } from '../../src/model/crossSection';
@@ -93,13 +94,13 @@ describe('synthesis', () => {
     expect(r.W).toBeGreaterThan(0.125);
     expect(Math.abs(r.z - 40)).toBeLessThanOrEqual(0.5);
   });
-  it('fixed-pitch near pitch - fmin and below-fab W', () => {
-    const near = tableCell(diff(), 40, { kind: 'fixed-pitch', pitch: 0.4 }, 0.125, 0.05).main;
-    if (near.ok) { expect(near.S!).toBeGreaterThanOrEqual(0.125 - 1e-9); expect(Math.abs(near.W + near.S! - 0.4)).toBeLessThan(1e-9); }
-    else expect(['out-of-range', 'below-fab']).toContain(near.reason);
+  it('fixed-pitch: unreachable target and below-fab W', () => {
+    const low = tableCell(diff(), 40, { kind: 'fixed-pitch', pitch: 0.4 }, 0.125, 0.05).main;
+    expect(low.ok).toBe(false);
+    if (!low.ok) { expect(low.reason).toBe('out-of-range'); finiteOrdered(low); }
     const narrow = tableCell(diff(), 150, { kind: 'fixed-pitch', pitch: 0.6 }, 0.125, 0.05).main;
     expect(narrow.ok).toBe(false);
-    if (!narrow.ok) expect(['below-fab', 'out-of-range']).toContain(narrow.reason);
+    if (!narrow.ok) { expect(narrow.reason).toBe('below-fab'); finiteOrdered(narrow); }
   });
   it('fixed-gap flags W below fab', () => {
     const r = tableCell(se(), 80, { kind: 'fixed-gap', gap: 0.2 }, 0.125, 0.05).main;
@@ -109,6 +110,20 @@ describe('synthesis', () => {
   it('compactWithinTol low target gives a real range', () => {
     const r = compactWithinTol(diff(), { target: 300, tol: 0.05, fmin: 0.125 });
     finiteOrdered(r);
+  });
+  it('compactWithinTol diff survives node-cap refusals at W = 4 and S = 8', () => {
+    refuse = (l) => l.W > 3;
+    try {
+      const hi = compactWithinTol(diff(), { target: 60, tol: 0.05, fmin: 0.125 });
+      expect(hi.ok || hi.reason !== 'error').toBe(true);
+      if (!hi.ok) { expect(hi.reason).toBe('out-of-range'); finiteOrdered(hi); }
+    } finally { refuse = null; }
+    refuse = (l) => (l.S ?? 0) > 7;
+    try {
+      const lo = compactWithinTol(diff(), { target: 300, tol: 0.05, fmin: 0.125 });
+      expect(lo.ok).toBe(false);
+      if (!lo.ok) { expect(lo.reason).toBe('out-of-range'); finiteOrdered(lo); }
+    } finally { refuse = null; }
   });
   it('q = 2 too-large error suggests the normal mesh, q = 1 does not', () => {
     forceTooLarge = true;
