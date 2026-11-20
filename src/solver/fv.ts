@@ -6,13 +6,15 @@ export function solveCap(p: Problem, grid: Grid, useDiel: boolean): CapResult {
   const tol = 1e-9;
   // cell permittivity (cell i,j spans xs[i..i+1] x ys[j..j+1])
   const er = new Float64Array((nx - 1) * (ny - 1)).fill(1);
+  const td = new Float64Array((nx - 1) * (ny - 1)); // loss tangent of the same rectangle that sets er (air = 0)
   if (useDiel) for (let j = 0; j < ny - 1; j++) {
     const yc = 0.5 * (ys[j] + ys[j + 1]);
     for (let i = 0; i < nx - 1; i++) {
       const xc = 0.5 * (xs[i] + xs[i + 1]);
-      let e = 1;
-      for (const d of p.diel) if (xc >= d.x0 && xc <= d.x1 && yc >= d.y0 && yc <= d.y1) e = d.er;
+      let e = 1, t = 0;
+      for (const d of p.diel) if (xc >= d.x0 && xc <= d.x1 && yc >= d.y0 && yc <= d.y1) { e = d.er; t = d.tand ?? 0; }
       er[j * (nx - 1) + i] = e;
+      td[j * (nx - 1) + i] = t;
     }
   }
   const V = new Float64Array(N), fixed = new Uint8Array(N);
@@ -23,19 +25,23 @@ export function solveCap(p: Problem, grid: Grid, useDiel: boolean): CapResult {
   }
   // edge coefficients (east / north) — box integration
   const ce = new Float64Array(N), cn = new Float64Array(N);
+  // same coefficients weighted by each adjacent cell's tan(delta): the lossy share of every edge term
+  const cet = new Float64Array(N), cnt = new Float64Array(N);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const id = j * nx + i;
     if (i < nx - 1) {
-      let a = 0;
-      if (j > 0) a += er[(j - 1) * (nx - 1) + i] * (ys[j] - ys[j - 1]) / 2;
-      if (j < ny - 1) a += er[j * (nx - 1) + i] * (ys[j + 1] - ys[j]) / 2;
+      let a = 0, at = 0;
+      if (j > 0) { const w = er[(j - 1) * (nx - 1) + i] * (ys[j] - ys[j - 1]) / 2; a += w; at += w * td[(j - 1) * (nx - 1) + i]; }
+      if (j < ny - 1) { const w = er[j * (nx - 1) + i] * (ys[j + 1] - ys[j]) / 2; a += w; at += w * td[j * (nx - 1) + i]; }
       ce[id] = a / (xs[i + 1] - xs[i]);
+      cet[id] = at / (xs[i + 1] - xs[i]);
     }
     if (j < ny - 1) {
-      let a = 0;
-      if (i > 0) a += er[j * (nx - 1) + i - 1] * (xs[i] - xs[i - 1]) / 2;
-      if (i < nx - 1) a += er[j * (nx - 1) + i] * (xs[i + 1] - xs[i]) / 2;
+      let a = 0, at = 0;
+      if (i > 0) { const w = er[j * (nx - 1) + i - 1] * (xs[i] - xs[i - 1]) / 2; a += w; at += w * td[j * (nx - 1) + i - 1]; }
+      if (i < nx - 1) { const w = er[j * (nx - 1) + i] * (xs[i + 1] - xs[i]) / 2; a += w; at += w * td[j * (nx - 1) + i]; }
       cn[id] = a / (ys[j + 1] - ys[j]);
+      cnt[id] = at / (ys[j + 1] - ys[j]);
     }
   }
   // A v = b on free nodes, PCG with Jacobi preconditioner
@@ -113,11 +119,11 @@ export function solveCap(p: Problem, grid: Grid, useDiel: boolean): CapResult {
   }
   for (let k = 0; k < N; k++) if (!fixed[k]) V[k] = x[k];
   // energy -> capacitance (relative to eps0), per unit length of the solved half domain
-  let W = 0;
+  let W = 0, Wt = 0;
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const id = j * nx + i;
-    if (i < nx - 1) { const dv = V[id] - V[id + 1]; W += ce[id] * dv * dv; }
-    if (j < ny - 1) { const dv = V[id] - V[id + nx]; W += cn[id] * dv * dv; }
+    if (i < nx - 1) { const dv = V[id] - V[id + 1]; W += ce[id] * dv * dv; Wt += cet[id] * dv * dv; }
+    if (j < ny - 1) { const dv = V[id] - V[id + nx]; W += cn[id] * dv * dv; Wt += cnt[id] * dv * dv; }
   }
-  return { c: W, V, iters: it, nx, ny };
+  return useDiel ? { c: W, V, iters: it, nx, ny, tandEff: W > 0 ? Wt / W : 0 } : { c: W, V, iters: it, nx, ny };
 }

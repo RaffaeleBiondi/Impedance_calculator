@@ -1,6 +1,7 @@
 import { buildCrossSection, type CrossSection, type Selection } from '../model/crossSection';
 import { etchReduction, validateStackup, type Stackup } from '../model/stackup';
 import { GeometryError, makeGrid } from './grid';
+import { alphaDbPerM } from './derived';
 import { richDiff, richSE } from './line';
 import { buildProblem, isTrapezoid, type LineGeom } from './problem';
 import type { BuildFn, DiffResult, SEResult } from './types';
@@ -70,8 +71,17 @@ export function analyze(req: AnalyzeRequest): AnalyzeResult {
   try {
     // Refuse oversize meshes before any solve: the finer (2q) grid of the Richardson pair is the largest.
     for (const mode of L.type === 'se' ? (['se'] as const) : (['odd', 'even'] as const)) makeGrid(build(mode, 2 * (req.q || 1)));
-    if (L.type === 'se') return { ok: true, kind: 'se', r: richSE(build, req.q, order), xs, wtop };
-    return { ok: true, kind: 'diff', r: richDiff(build, req.q, order), oddOnly, xs, wtop };
+    const f = req.freqGHz;
+    if (L.type === 'se') {
+      const r = richSE(build, req.q, order);
+      const lossDbPerM = f != null && f > 0 ? alphaDbPerM(f, r.eeff, r.tandEff ?? 0) : undefined;
+      return { ok: true, kind: 'se', r, xs, wtop, ...(lossDbPerM !== undefined ? { lossDbPerM } : {}) };
+    }
+    const r = richDiff(build, req.q, order);
+    // Far boundaries only: the even mode of a no-reference pair is meaningless, so hide it.
+    if (oddOnly) { r.Zeven = NaN; r.Zcm = NaN; r.eeven = NaN; r.kb = NaN; }
+    const lossDbPerM = f != null && f > 0 ? alphaDbPerM(f, r.eodd, r.tandEffOdd ?? 0) : undefined;
+    return { ok: true, kind: 'diff', r, oddOnly, xs, wtop, ...(lossDbPerM !== undefined ? { lossDbPerM } : {}) };
   } catch (e) {
     if (e instanceof GeometryError) return { ok: false, error: e.message };
     throw e;
