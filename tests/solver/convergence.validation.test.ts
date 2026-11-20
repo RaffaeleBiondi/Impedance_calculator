@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { innerB, outerB, sel, xsOf } from '../helpers/stackups';
+import { outerB, sel, xsOf } from '../helpers/stackups';
+import { V13_CASES, V13_OPEN, V7_CASES } from '../helpers/validation';
 import { exampleStackup } from '../../src/model/example';
 import type { CrossSection } from '../../src/model/crossSection';
 import { makeBuild } from '../../src/solver/engine';
@@ -9,9 +10,6 @@ import { analyzeDiff, analyzeSE, richDiff, richSE } from '../../src/solver/line'
 /* eslint-disable no-console */
 const ex = exampleStackup();
 const oB = (): CrossSection => xsOf(outerB(), sel('cu0', null, 'cu1'));
-const iB = (): CrossSection => xsOf(innerB(), sel('cu2', 'cu1', 'cu3'));
-const trap35 = (W: number): number => W - 0.7 * 0.035;
-const trap18 = (W: number): number => W - 0.7 * 0.018;
 
 function z(xs: CrossSection, line: LineGeom, q: number, rich = true): number {
   const b = makeBuild(xs, line);
@@ -21,25 +19,7 @@ function z(xs: CrossSection, line: LineGeom, q: number, rich = true): number {
 }
 
 describe('V7: mesh convergence rich(1,2) vs rich(2,4) ≤ 0.3 %', () => {
-  const cases: { name: string; xs: () => CrossSection; line: LineGeom }[] = [
-    // spec Appendix B (legacy grid: +0.004 / -0.265 / +0.121 / +0.011 / -0.045 / -0.046 %)
-    { name: 'inner SE 0.125', xs: iB, line: { W: 0.125 } },
-    { name: 'outer SE 0.22 (masked)', xs: oB, line: { W: 0.22 } },
-    { name: 'outer CPWG 0.22 G 0.15', xs: oB, line: { W: 0.22, G: 0.15 } },
-    { name: 'inner diff 0.125/0.2', xs: iB, line: { W: 0.125, S: 0.2 } },
-    { name: 'outer diff 0.15/0.2', xs: oB, line: { W: 0.15, S: 0.2 } },
-    { name: 'outer diff 0.3/0.18', xs: oB, line: { W: 0.3, S: 0.18 } },
-    // new topologies
-    { name: 'embedded microstrip (In2, ref In1)', xs: () => xsOf(ex, sel('cu2', 'cu1', null)), line: { W: 0.15 } },
-    { name: 'embedded, open base (In2, ref In3)', xs: () => xsOf(ex, sel('cu2', null, 'cu3')), line: { W: 0.15 } },
-    { name: 'skip-layer stripline (In5, In3/In6)', xs: () => xsOf(ex, sel('cu5', 'cu3', 'cu6')), line: { W: 0.15 } },
-    { name: 'CPW no ground (F.Cu)', xs: () => xsOf(ex, sel('cu0', null, null)), line: { W: 0.2, G: 0.15 } },
-    { name: 'CPWG stripline (In5)', xs: () => xsOf(ex, sel('cu5', 'cu4', 'cu6')), line: { W: 0.135, G: 0.15 } },
-    { name: 'trapezoid SE (In5)', xs: () => xsOf(ex, sel('cu5', 'cu4', 'cu6')), line: { W: 0.135, Wtop: trap18(0.135) } },
-    { name: 'trapezoid diff (In5)', xs: () => xsOf(ex, sel('cu5', 'cu4', 'cu6')), line: { W: 0.125, S: 0.315, Wtop: trap18(0.125) } },
-    { name: 'masked trapezoid SE (F.Cu)', xs: () => xsOf(ex, sel('cu0', null, 'cu1')), line: { W: 0.2, Wtop: trap35(0.2) } },
-    { name: 'masked trapezoid diff + G (F.Cu)', xs: () => xsOf(ex, sel('cu0', null, 'cu1')), line: { W: 0.17, S: 0.27, G: 0.2, Wtop: trap35(0.17) } },
-  ];
+  const cases = V7_CASES;
   for (const c of cases) {
     it(c.name, () => {
       const xs = c.xs();
@@ -57,11 +37,7 @@ describe('V7: mesh convergence rich(1,2) vs rich(2,4) ≤ 0.3 %', () => {
 });
 
 describe('V13: trapezoid slices and observed mesh order', () => {
-  const cases: { name: string; xs: () => CrossSection; line: LineGeom }[] = [
-    { name: 'F.Cu SE 0.20 (masked)', xs: () => xsOf(ex, sel('cu0', null, 'cu1')), line: { W: 0.2, Wtop: trap35(0.2) } },
-    { name: 'In5 SE 0.135', xs: () => xsOf(ex, sel('cu5', 'cu4', 'cu6')), line: { W: 0.135, Wtop: trap18(0.135) } },
-    { name: 'F.Cu diff 0.17/0.27 (masked)', xs: () => xsOf(ex, sel('cu0', null, 'cu1')), line: { W: 0.17, S: 0.27, Wtop: trap35(0.17) } },
-  ];
+  const cases = V13_CASES;
   for (const c of cases) {
     it(`${c.name}: 8 vs 16 slices ≤ 0.1 %`, () => {
       const xs = c.xs();
@@ -84,10 +60,7 @@ describe('V13: trapezoid slices and observed mesh order', () => {
       expect(pr).toBeLessThan(1.6);
     }, 60_000);
   }
-  for (const c of [
-    { name: 'embedded microstrip (In2, ref In1)', xs: () => xsOf(ex, sel('cu2', 'cu1', null)), line: { W: 0.15 } },
-    { name: 'CPW no ground (F.Cu)', xs: () => xsOf(ex, sel('cu0', null, null)), line: { W: 0.2, G: 0.15 } },
-  ]) {
+  for (const c of V13_OPEN) {
     it(`open boundary, ${c.name}: observed order stays at 1.5`, () => {
       const xs = c.xs();
       const [z1, z2, z4] = [1, 2, 4].map((q) => z(xs, c.line, q, false));

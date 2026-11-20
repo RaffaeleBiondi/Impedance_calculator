@@ -9,15 +9,14 @@ const builder = (g: any): BuildFn => (mode: Mode, q: number) =>
   legacy.buildProblem({ ...g, S: mode === 'se' ? 0 : g.S }, mode, q);
 
 describe('V3: coupled stripline vs Cohn', () => {
-  it('Zodd and Zeven errors lie within [-0.1 %, 0]', () => {
+  // Cohn now uses the exact eta0 (refs.ts ETA0); the original page's −0.05 / −0.06 % used eta0 = 120π.
+  it('Zodd and Zeven errors lie within ±0.1 %', () => {
     const g = { type: 'strip', T: 0, H1: 0.2, er1: 4, H2: 0.2, er2: 4, erf: 4, G: null, W: 0.15, S: 0.25 };
     const r = richDiff(builder(g), 4, 1);
     const ref = cohnCoupled(0.15, 0.25, 0.4, 4);
     const eo = r.Zodd / ref.zoo - 1, ee = r.Zeven / ref.zoe - 1;
-    expect(eo).toBeGreaterThanOrEqual(-0.001);
-    expect(eo).toBeLessThanOrEqual(0);
-    expect(ee).toBeGreaterThanOrEqual(-0.001);
-    expect(ee).toBeLessThanOrEqual(0);
+    expect(Math.abs(eo)).toBeLessThanOrEqual(0.001);
+    expect(Math.abs(ee)).toBeLessThanOrEqual(0.001);
   });
 });
 
