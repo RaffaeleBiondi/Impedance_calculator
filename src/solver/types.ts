@@ -10,14 +10,14 @@ export interface Problem {
   hmin: number; hmax: number; hminX?: number; hmaxX?: number; hmaxY?: number; growth: number;
 }
 export interface Grid { xs: Float64Array; ys: Float64Array }
-export interface CapResult { c: number; V: Float64Array; iters: number; nx: number; ny: number }
+export interface CapResult { c: number; V: Float64Array; iters: number; nx: number; ny: number; tandEff?: number /* energy-weighted loss tangent, only with dielectrics */ }
 export type BuildFn = (mode: Mode, q: number) => Problem;
 export interface FieldData { V: Float64Array; xs: Float64Array; ys: Float64Array }
 export interface SEResult {
   Z0: number; eeff: number; tpd: number /* ns/m = ps/mm */; C: number;
-  nodes: number; iters: number; field: FieldData; meshDelta?: number;
+  nodes: number; iters: number; field: FieldData; meshDelta?: number; tandEff?: number;
 }
 export interface DiffResult {
   Zodd: number; Zeven: number; Zdiff: number; Zcm: number; eodd: number; eeven: number;
-  tpdOdd: number; kb: number; nodes: number; iters: number; field: FieldData; meshDelta?: number;
+  tpdOdd: number; kb: number; nodes: number; iters: number; field: FieldData; meshDelta?: number; tandEffOdd?: number;
 }

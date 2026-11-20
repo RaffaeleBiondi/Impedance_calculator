@@ -40,6 +40,7 @@ export function buildProblem(xs: CrossSection, line: LineGeom, mode: Mode, q: nu
   const dom = opts.dom || 1;
   const T = Math.max(0, xs.T), W = line.W;
   const diff = mode !== 'se';
+  if (diff && !(line.S != null && line.S > 0)) throw new Error(`Gap S must be > 0 for ${mode}-mode problems`);
   const S = diff ? (line.S as number) : 0;
   const xa = diff ? S / 2 : 0, xb = diff ? S / 2 + W : W / 2; // trace span in the half domain (at the base)
   const G = line.G;
