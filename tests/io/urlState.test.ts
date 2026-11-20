@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { encodeHash, decodeHash } from '../../src/io/urlState';
+import { encodeHash, decodeHash, MAX_HASH_CHARS } from '../../src/io/urlState';
 import { defaultAppState } from '../../src/state/types';
 
 describe('URL hash state', () => {
@@ -56,5 +56,19 @@ describe('calc/class/table validation', () => {
   it('rejects a truncated hash', () => {
     const h = encodeHash(defaultAppState());
     expect(decodeHash(h.slice(0, Math.floor(h.length / 2))).ok).toBe(false);
+  });
+  it('refuses a hash longer than 100 000 characters before decompressing', () => {
+    expect(MAX_HASH_CHARS).toBe(100_000);
+    const d = decodeHash('#s=' + 'A'.repeat(100_000));
+    expect(d).toEqual({ ok: false, error: 'Share link too long' });
+  });
+  it('refuses a short hash that decompresses to more than 2 MB of JSON', () => {
+    const s = defaultAppState();
+    s.stackup.name = 'x'.repeat(2.5 * 1024 * 1024);
+    const h = encodeHash(s);
+    expect(h.length).toBeLessThan(100_000);
+    const d = decodeHash(h);
+    expect(d.ok).toBe(false);
+    if (!d.ok) expect(d.error).toMatch(/too large/);
   });
 });

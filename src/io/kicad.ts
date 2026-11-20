@@ -1,8 +1,10 @@
 import type { CopperLayer, DielectricLayer, Mask, Role, Stackup } from '../model/stackup';
+import { validateStackup } from '../model/stackup';
 import { parseSexpr, type SNode } from './sexpr';
 
 export type KicadImportResult =
-  | { ok: true; stackup: Stackup; warnings: string[]; needsRoleReview: true }
+  /** `errors`: stackup validation errors, shown in the review before the stackup is used. */
+  | { ok: true; stackup: Stackup; warnings: string[]; errors: string[]; needsRoleReview: true }
   | { ok: false; error: string };
 
 const isList = (n: SNode | undefined): n is SNode[] => Array.isArray(n);
@@ -58,7 +60,7 @@ export function importKicadStackup(text: string): KicadImportResult {
   const warnings: string[] = [];
   const roleByName = new Map<string, Role>();
   for (const e of layersForm.slice(1)) {
-    if (isList(e) && typeof e[1] === 'string' && typeof e[2] === 'string' && e[2] in ROLE) {
+    if (isList(e) && typeof e[1] === 'string' && typeof e[2] === 'string' && Object.hasOwn(ROLE, e[2])) {
       roleByName.set(e[1], ROLE[e[2]]);
     }
   }
@@ -113,17 +115,23 @@ export function importKicadStackup(text: string): KicadImportResult {
     warnings.push(`No ${side} solder mask in the stackup, using thickness 0.`);
     return { t: 0, er: 3.3, tand: 0.02 };
   };
-  return {
-    ok: true,
-    needsRoleReview: true,
-    warnings,
-    stackup: {
-      schema: 'lordoftheohms/stackup@1',
-      name: 'Imported from KiCad',
-      layers,
-      maskTop: masks.top ?? noMask('top'),
-      maskBottom: masks.bottom ?? noMask('bottom'),
-      etch: { mode: 'rect', rule: { by: 'fraction', value: 0.7 } },
-    },
+  const out: Stackup = {
+    schema: 'lordoftheohms/stackup@1',
+    name: 'Imported from KiCad',
+    layers,
+    maskTop: masks.top ?? noMask('top'),
+    maskBottom: masks.bottom ?? noMask('bottom'),
+    etch: { mode: 'rect', rule: { by: 'fraction', value: 0.7 } },
   };
+  return { ok: true, needsRoleReview: true, warnings, errors: stackupErrors(out), stackup: out };
+}
+
+/** Validation errors of a stackup, each labelled with the layer it concerns (copper name or dielectric material). */
+export function stackupErrors(s: Stackup): string[] {
+  const label = (id?: string) => {
+    const l = id === undefined ? undefined : s.layers.find((x) => x.id === id);
+    if (!l) return '';
+    return ` (${l.kind === 'copper' ? l.name : l.material || id})`;
+  };
+  return validateStackup(s).filter((i) => i.level === 'error').map((i) => `${i.msg}${label(i.layerId)}`);
 }

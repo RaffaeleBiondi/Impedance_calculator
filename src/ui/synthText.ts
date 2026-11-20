@@ -2,12 +2,28 @@ import type { SynthResult } from '../solver/synthesis';
 import type { Unit } from '../model/units';
 import { lenText } from './lenText';
 
-type Fail = Extract<SynthResult, { ok: false }>;
 type Ok = Extract<SynthResult, { ok: true }>;
-interface Ctx { op: 'findW' | 'findS' | 'compact'; target: number; tolPct: number; fmin: number; W: number; unit: Unit }
+/** A failed synthesis: the structured fields when present, and the worker text (mm, "ohm") as the last resort. */
+export type Fail = Pick<Extract<SynthResult, { ok: false }>, 'message'> & Partial<Pick<Extract<SynthResult, { ok: false }>, 'reason' | 'zRange'>>;
+/** `pitch` is the fixed pitch of a width-table class, when it has one. */
+interface Ctx { op: 'findW' | 'findS' | 'compact'; target: number; tolPct: number; fmin: number; W: number; unit: Unit; pitch?: number }
 
 const zt = (z: number) => z.toFixed(1);
 const pct = (t: number) => +t.toFixed(2);
+
+/** Signed percentage with `digits` decimals; values that round to zero print as 0 (never "-0.00"). */
+export function signedPct(x: number, digits: number): string {
+  const t = x.toFixed(digits);
+  return Number(t) === 0 ? (0).toFixed(digits) : t;
+}
+
+/** Worker text to display text: mm lengths in the display unit, "ohm" as Ω, "+/-" as ±. */
+export function displayText(msg: string, unit: Unit): string {
+  return msg
+    .replace(/(\d+(?:\.\d+)?)\s*mm\b/g, (_m, v: string) => lenText(Number(v), unit))
+    .replace(/\bohm\b/g, 'Ω')
+    .replace(/\+\/-/g, '±');
+}
 
 /** One-line text for a failed synthesis, built from the structured fields in the display unit (worker text is mm/ohm). */
 export function failText(r: Fail, c: Ctx): string {
@@ -23,7 +39,10 @@ export function failText(r: Fail, c: Ctx): string {
     if (c.op === 'compact') return `No geometry within ±${pct(c.tolPct)} % of ${t}: Z reaches ${range}`;
     return `${t} is out of reach: Z goes from ${range}`;
   }
-  return r.message.replace(/\bohm\b/g, 'Ω');
+  if (r.reason === 'below-fab' && c.pitch !== undefined) {
+    return `Pitch ${lenText(c.pitch, c.unit)} leaves no room for W and a gap of ${lenText(c.fmin, c.unit)}`;
+  }
+  return displayText(r.message, c.unit);
 }
 
 const WHY: Record<string, (t: number) => string> = {

@@ -6,20 +6,22 @@ import { NumInput } from './NumInput';
 import { buildReq } from './reqs';
 import { coppers, defaultRefs } from '../model/stackup';
 import { formatLen, toDisplay } from '../model/units';
-import { widthTableCsv, type CellResult, type WidthRow } from '../io/csv';
+import { mainFailText, widthTableCsv, type CellResult, type WidthRow } from '../io/csv';
+import { failText, signedPct } from './synthText';
 import type { ImpClass } from '../state/types';
 import type { GapRule } from '../model/gapRule';
 import type { Job } from '../solver/protocol';
 
 type Refs = { above: string | null; below: string | null };
 const EPS = 1e-9;
-type Cell = CellResult & { detail?: string };
+type Cell = CellResult;
 
-function Fail({ c }: { c: Cell }) {
+/** Failure text built from the structured result, in the display unit with Ω. */
+function Fail({ c, text }: { c: Cell; text: string }) {
   if (c.ok) return null;
   return (
     <>
-      {c.message}
+      {text}
       {c.detail && <details className="more"><summary>Why?</summary>{c.detail}</details>}
     </>
   );
@@ -38,11 +40,13 @@ function ruleOf(kind: GapRule['kind'], prev: GapRule, fmin: number): GapRule {
 const foot = (c: CellResult, diff: boolean) => (!c.ok ? NaN : diff ? 2 * c.W + (c.S ?? 0) : c.W);
 
 export function WidthTable() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, stackupRev } = useStore();
   const pool = usePool();
   const { classes, tableLayers, stackup, unit, calc } = state;
   const cus = coppers(stackup);
   const [overrides, setOverrides] = useState<Record<string, Refs>>({});
+  // Reference overrides are keyed by layer id, which means nothing in a replaced stackup.
+  useEffect(() => { setOverrides({}); }, [stackupRev]);
   const [rows, setRows] = useState<WidthRow[] | null>(null);
   const [prog, setProg] = useState<[number, number] | null>(null);
   const [err, setErr] = useState('');
@@ -206,20 +210,20 @@ export function WidthTable() {
                     {m.ok ? (
                       <>
                         <td>{len(m.W)}</td><td>{len(m.S)}</td><td>{m.z.toFixed(2)}</td>
-                        <td>{(((m.z - r.cls.target) / r.cls.target) * 100).toFixed(2)}%</td>
+                        <td>{signedPct(((m.z - r.cls.target) / r.cls.target) * 100, 2)}%</td>
                         <td className={below ? 'warn' : ''} title={below ? `Below fab minimum ${formatLen(calc.fmin, unit)}` : 'Meets fab minimum'}>{below ? '⚠' : '✓'}</td>
                       </>
                     ) : (
-                      <td colSpan={5} className="warn"><Fail c={m} /></td>
+                      <td colSpan={5} className="warn"><Fail c={m} text={m.ok ? '' : mainFailText(m, r.cls, unit, calc.fmin)} /></td>
                     )}
                     {c.ok ? (
                       <>
                         <td />
                         <td>{len(c.W)}</td><td>{len(c.S)}</td><td>{c.z.toFixed(2)}</td>
-                        <td>{saved === null ? '' : `${saved.toFixed(0)}%`}</td>
+                        <td>{saved === null ? '' : `${signedPct(saved, 0)}%`}</td>
                       </>
                     ) : (
-                      <td colSpan={5} className="warn"><Fail c={c} /></td>
+                      <td colSpan={5} className="warn"><Fail c={c} text={c.ok ? '' : failText(c, { op: 'compact', target: r.cls.target, tolPct: calc.tol, fmin: calc.fmin, W: calc.W, unit })} /></td>
                     )}
                   </tr>
                 );

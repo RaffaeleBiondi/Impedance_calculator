@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import type { CopperLayer, DielectricLayer, EtchRule, Role, Stackup } from '../model/stackup';
 import { validateStackup } from '../model/stackup';
@@ -17,9 +17,12 @@ const readSaved = (): Saved => {
 };
 
 export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } = {}) {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, stackupRev } = useStore();
   const { stackup, unit, calc } = state;
   const [msg, setMsg] = useState<string | null>(null);
+  // A successful replacement (import, load, reset) clears an earlier message such as a failed import;
+  // the store notice reports the replacement itself.
+  useEffect(() => { setMsg(null); }, [stackupRev]);
   const [saved, setSaved] = useState<Saved>(readSaved);
   const [pick, setPick] = useState('');
   const file = useRef<HTMLInputElement>(null);
@@ -34,7 +37,7 @@ export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } 
   };
   const load = () => {
     const s = saved[pick];
-    if (s) dispatch({ type: 'setStackup', stackup: s });
+    if (s) dispatch({ type: 'replaceStackup', stackup: s });
   };
   const del = () => {
     const next = { ...readSaved() };
@@ -52,7 +55,7 @@ export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } 
   };
   const importJson = async (f: File) => {
     const r = parseStackupJson(await f.text());
-    if (r.ok) { dispatch({ type: 'setStackup', stackup: r.stackup }); setMsg(`Imported "${r.stackup.name}".`); }
+    if (r.ok) dispatch({ type: 'replaceStackup', stackup: r.stackup });
     else setMsg(`Import failed: ${r.errors.join('; ')}`);
   };
   const share = async () => {

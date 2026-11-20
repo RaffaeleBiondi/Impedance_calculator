@@ -2,6 +2,7 @@ import type { AppState } from '../state/types';
 import { defaultAppState } from '../state/types';
 import { decodeHash, checkAppState } from './urlState';
 import { KEYS, type storage } from './storage';
+import { normalizeSelection } from '../state/reducer';
 
 export function loadInitialState(
   hash: string, store: typeof storage,
@@ -9,7 +10,10 @@ export function loadInitialState(
   let notice: string | undefined;
   if (hash && hash !== '#') {
     const d = decodeHash(hash);
-    if (d.ok) return { state: d.state, source: 'hash' };
+    if (d.ok) {
+      const n = normalizeSelection(d.state);
+      return { state: n.state, source: 'hash', notice: n.notice };
+    }
     notice = `Could not load the shared link (${d.error}).`;
   }
   let saved: unknown = null;
@@ -17,7 +21,9 @@ export function loadInitialState(
   if (saved !== null) {
     const c = checkAppState(saved);
     if (c.ok) {
-      return { state: c.state, source: 'storage', notice: notice ? `${notice} Restored your last session instead.` : undefined };
+      const n = normalizeSelection(c.state);
+      const parts = [notice && `${notice} Restored your last session instead.`, n.notice].filter(Boolean);
+      return { state: n.state, source: 'storage', notice: parts.length ? parts.join(' ') : undefined };
     }
     notice = (notice ? notice + ' ' : '') + 'Saved session was invalid and was ignored.';
   }

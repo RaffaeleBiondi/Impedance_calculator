@@ -75,4 +75,27 @@ describe('importKicadStackup', () => {
     expect(importKicadStackup('not a board').ok).toBe(false);
     expect(importKicadStackup('(kicad_pcb (layers (0 "F.Cu" signal)) (setup (pad_to_mask_clearance 0)))').ok).toBe(false);
   });
+
+  it('ignores inherited keys as layer types: a layer typed "constructor" is assumed signal with a warning', () => {
+    const text = fx('kicad7-4layer.kicad_pcb').replace('(1 "In1.Cu" power)', '(1 "In1.Cu" constructor)');
+    const r = importKicadStackup(text);
+    if (!r.ok) throw new Error(r.error);
+    const in1 = coppers(r.stackup).find((c) => c.name === 'In1.Cu')!;
+    expect(in1.role).toBe('signal');
+    expect(r.warnings.some((w) => /In1\.Cu: no layer type/.test(w))).toBe(true);
+    for (const t of ['toString', '__proto__', 'hasOwnProperty']) {
+      const x = importKicadStackup(fx('kicad7-4layer.kicad_pcb').replace('(1 "In1.Cu" power)', `(1 "In1.Cu" ${t})`));
+      if (!x.ok) throw new Error(x.error);
+      expect(['signal', 'plane', 'mixed']).toContain(coppers(x.stackup)[1].role);
+    }
+  });
+
+  it('runs the stackup validation on the import output', () => {
+    const good = importKicadStackup(fx('kicad7-4layer.kicad_pcb'));
+    if (!good.ok) throw new Error(good.error);
+    expect(good.errors).toEqual([]);
+    const bad = importKicadStackup(fx('kicad9-4layer-sublayers.kicad_pcb'));
+    if (!bad.ok) throw new Error(bad.error);
+    expect(bad.errors.some((e) => /er must be/.test(e) && /Prepreg C/.test(e))).toBe(true);
+  });
 });
