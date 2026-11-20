@@ -1,4 +1,5 @@
 import type { CopperLayer, Role, Stackup } from '../model/stackup';
+import { stackupErrors } from '../io/kicad';
 
 export function RoleReview({ stackup, warnings, onChange, onConfirm, onCancel }: {
   stackup: Stackup;
@@ -8,6 +9,7 @@ export function RoleReview({ stackup, warnings, onChange, onConfirm, onCancel }:
   onCancel: () => void;
 }) {
   const coppers = stackup.layers.filter((l): l is CopperLayer => l.kind === 'copper');
+  const errors = stackupErrors(stackup);
   const setRole = (id: string, role: Role) =>
     onChange({ ...stackup, layers: stackup.layers.map((l) => (l.kind === 'copper' && l.id === id ? { ...l, role } : l)) });
   return (
@@ -32,6 +34,13 @@ export function RoleReview({ stackup, warnings, onChange, onConfirm, onCancel }:
           ))}
         </tbody>
       </table>
+      {errors.length > 0 && (
+        <>
+          <h4>Errors</h4>
+          <p className="hint">Fix these in the stackup editor after import.</p>
+          <ul className="issues" role="alert" aria-label="Stackup errors">{errors.map((m, i) => <li key={i}>{m}</li>)}</ul>
+        </>
+      )}
       {warnings.length > 0 && (
         <>
           <h4>Import notes</h4>

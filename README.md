@@ -4,13 +4,11 @@
 
 Field-solver PCB impedance calculator for any stackup, in your browser.
 
-> **Status: work in progress — the app is being built.** The design is written and implementation is starting. Nothing below is usable yet: features are described as planned for v1.
-
-Live site: coming soon.
+Live site: https://lordoftheohms.vercel.app
 
 ## What it is
 
-LordOfTheOhms will be a free, public PCB transmission-line impedance calculator that runs entirely in the browser. You describe your stackup (any number of layers, your own materials, your own reference planes), pick a geometry, and get impedance from a real 2D quasi-static field solver, together with the assumptions behind the number and how the solver was validated.
+LordOfTheOhms is a free, public PCB transmission-line impedance calculator that runs entirely in the browser. You describe your stackup (any number of layers, your own materials, your own reference planes), pick a geometry, and get impedance from a real 2D quasi-static field solver, together with the assumptions behind the number and how the solver was validated.
 
 ### Why a field solver
 
@@ -28,7 +26,7 @@ A field solver computes the electrostatic field of the actual cross-section, so 
 - **Synthesis:** finding W (or the gap) for a target impedance is a root-finding problem, solved in log space.
 - **Most compact geometry:** given a target ±tol and a fab minimum for width and gap, the tool searches for the smallest geometry that stays inside the tolerance band. Because Z falls as W grows and rises as the gap grows, the optimum sits on a corner of the region allowed by the fab minimum and the tolerance band.
 
-## Planned v1 features
+## Features
 
 - **Stackup editor:**
   - any number of copper layers, each with a name, a role (signal / plane / mixed) and a copper thickness;
@@ -40,33 +38,26 @@ A field solver computes the electrostatic field of the actual cross-section, so 
   - symmetric and asymmetric stripline;
   - coplanar waveguide (CPW), with and without a ground plane;
   - edge-coupled differential pairs, with and without coplanar GND.
-- **Etch profile:** rectangular (default) or trapezoidal.
+- **Etch profile:** rectangular (default) or trapezoidal, with a global rule and per-layer overrides.
 - **Results:**
   - Z0, Zdiff, Zodd, Zeven, Zcm;
   - εeff, delay, C and L per unit length;
-  - a plot of the potential field;
+  - a plot of the potential field and a labelled cross-section;
   - dielectric loss;
   - delay and skew, when trace lengths are entered.
-- **Synthesis:** find W for a target impedance, find the gap with W fixed, or find the most compact geometry.
+- **Synthesis:** find W for a target impedance, find the gap with W fixed, or find the most compact geometry within a tolerance and a fab minimum.
 - **Sweep:** chart of Z vs W or Z vs gap.
-- **Width table:** for a stackup, impedance classes × signal layers, with CSV export.
-- **Material library** with presets.
-- **Persistence and sharing:** JSON import/export, shareable link, local autosave, and import of the stackup from a KiCad `.kicad_pcb` file.
-- **Units:** mm, mil or µm.
+- **Width table:** impedance classes × signal layers, with CSV export.
+- **Material library** with cited presets and your own materials.
+- **Persistence and sharing:** JSON import/export, named stackups saved in the browser, shareable link, local autosave, and import of the stackup from a KiCad `.kicad_pcb` file with a review of the layer roles.
+- **Units:** mm, mil or µm (display only; values are stored in mm).
+- **Light and dark themes.**
 
 ## Accuracy and validation
 
-LordOfTheOhms ports an existing field solver. These are the results of that original solver:
+Every geometry is checked against an exact solution, a closed form or a published reference, together with mesh convergence, regression against the original solver and unit tests. Most checks pass within the reference's stated accuracy. Where the reference is an approximate closed form with no stated accuracy, or the result falls outside it, the deviation is recorded together with an independent finite-difference (FD) second reference; on the cases checked the solver agrees with the FD reference within 0.1 %, so the deviation is the approximation's. Solder mask has no reference and is covered by a sensitivity study only.
 
-| Check | Result |
-|---|---|
-| Coupled stripline vs Cohn's exact formulas (T = 0) | Zodd −0.05 %, Zeven −0.06 % |
-| Microstrip vs Hammerstad-Jensen (T = 0, W/H 0.5–2) | −0.02 to −0.07 % |
-| Normal vs fine mesh, six cases | within 0.3 % |
-
-Hammerstad-Jensen's own εeff accuracy is about 0.2 %, so the microstrip row shows agreement within the accuracy of the reference, not a 0.05 % solver accuracy.
-
-Each new geometry will be validated against a closed form or a published reference, and the results will be recorded in `docs/validation.md`.
+The full table, with every case, number and note, is in [`docs/validation.md`](docs/validation.md). The same rows appear in the app under "Assumptions & validation".
 
 ## Modelling assumptions and limitations
 
@@ -75,35 +66,33 @@ Each new geometry will be validated against a closed form or a published referen
 - **Planes** are assumed solid.
 - **Skipped reference layers:** a layer that is skipped is assumed to be cut out under the trace.
 - **Solder mask** is modelled as a single conformal thickness.
-- **Trapezoid default:** top width = W − 0.7·T. This is a rule of thumb: ask your fab for their etch profile.
+- **Trapezoid default:** top width = W − 0.7·T, a placeholder rule of thumb (0.7·T) — use your fab's value.
 
 ## Privacy
 
 - There is no backend: everything runs in your browser.
+- The page makes no third-party requests: no analytics, no trackers, and the fonts are self-hosted.
 - Your stackups stay in your browser.
 - Share links carry the state in the URL fragment (the part after `#`), which browsers do not send to the server.
 
 ## Development
 
-These commands will be available once the app is scaffolded:
+Requires Node.js 22 or later.
 
 ```sh
-npm install     # install dependencies
-npm run dev     # start the local dev server
-npm test        # run the test suite
-npm run build   # production build
+npm install                # install dependencies
+npm run dev                # start the local dev server
+npm test                   # run the test suite
+npm run test:validation    # run the validation suite (docs/validation.md)
+npm run build              # production build into dist/
 ```
 
 ## Deployment
-
-Planned setup:
 
 - A static Vite build on Vercel, connected to this GitHub repository.
 - Pushes to `main` deploy to production, and pull requests get preview deployments.
 - No environment variables are needed.
 - The site is intentionally public. To restrict it, enable Vercel Authentication under **Project Settings → Deployment Protection**.
-
-Live URL: coming soon.
 
 ## License
 

@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { reducer } from '../../src/state/reducer';
+import { readFileSync } from 'node:fs';
+import { normalizeSelection, reducer } from '../../src/state/reducer';
+import { importKicadStackup } from '../../src/io/kicad';
 import { defaultAppState } from '../../src/state/types';
 import { buildCrossSection } from '../../src/model/crossSection';
-import { defaultRefs } from '../../src/model/stackup';
+import { coppers, defaultRefs } from '../../src/model/stackup';
 
 const base = () => {
   const s = defaultAppState();
@@ -123,25 +125,82 @@ describe('invalid selection fallback (Task 14)', () => {
   });
 });
 
-describe('setStackup keeps a valid selection (Task 14)', () => {
-  it('loading a stackup where the selected layer is a plane moves the selection with a notice', () => {
+describe('replaceStackup resets the selection (whole-stackup replacement)', () => {
+  const kicad = () => {
+    const r = importKicadStackup(readFileSync(new URL('../fixtures/kicad8-6layer.kicad_pcb', import.meta.url), 'utf8'));
+    if (!r.ok) throw new Error(r.error);
+    return r.stackup;
+  };
+
+  it('KiCad import with In3.Cu set to plane: no stale selection from matching ids (repro)', () => {
+    const s = base(); // example: In5.Cu = cu5, refs cu4 / cu6
+    const st = kicad();
+    const in3 = st.layers.find((l) => l.kind === 'copper' && l.name === 'In3.Cu')!;
+    if (in3.kind === 'copper') in3.role = 'plane';
+    const r = reducer(s, { type: 'replaceStackup', stackup: st });
+    const c = r.state.calc;
+    const sel = r.state.stackup.layers.find((l) => l.id === c.layerId)!;
+    // nearest signal layer from the top, not B.Cu (which happens to be cu5 now)
+    expect(sel.kind === 'copper' && sel.name).toBe('F.Cu');
+    const d = defaultRefs(r.state.stackup, c.layerId);
+    expect([c.refAbove, c.refBelow]).toEqual([d.above, d.below]);
+    const refRoles = [c.refAbove, c.refBelow].map((id) => {
+      const l = r.state.stackup.layers.find((x) => x.id === id);
+      return l && l.kind === 'copper' ? l.role : null;
+    });
+    expect(refRoles.every((role) => role === null || role !== 'signal')).toBe(true);
+    expect(r.state.tableLayers).toEqual(coppers(st).filter((l) => l.role !== 'plane').map((l) => l.id));
+    expect(r.notice).toMatch(/F\.Cu/);
+  });
+
+  it('replacing with the same ids still resets layer, refs and table layers to the defaults', () => {
+    const s = base();
+    s.calc.layerId = 'cu7'; s.calc.refAbove = 'cu6'; s.calc.refBelow = 'cu8';
+    s.tableLayers = ['cu7'];
+    const st = structuredClone(s.stackup);
+    const r = reducer(s, { type: 'replaceStackup', stackup: st });
+    const fresh = defaultAppState();
+    const first = st.layers.find((l) => l.kind === 'copper' && l.role !== 'plane')!;
+    expect(r.state.calc.layerId).toBe(first.id);
+    const d = defaultRefs(st, first.id);
+    expect([r.state.calc.refAbove, r.state.calc.refBelow]).toEqual([d.above, d.below]);
+    expect(r.state.tableLayers).toEqual(fresh.tableLayers);
+    expect(r.state.calc.W).toBe(s.calc.W); // geometry inputs are kept
+    expect(r.notice).toBeTruthy();
+  });
+
+  it('a stackup whose top layer is a plane selects the nearest signal layer, never a plane', () => {
     const s = base();
     const st = structuredClone(s.stackup);
-    const l = st.layers.find((x) => x.id === 'cu5')!;
+    const top = st.layers[0];
+    if (top.kind === 'copper') top.role = 'plane';
+    const r = reducer(s, { type: 'replaceStackup', stackup: st });
+    const sel = r.state.stackup.layers.find((x) => x.id === r.state.calc.layerId)!;
+    expect(sel.kind === 'copper' && sel.role !== 'plane').toBe(true);
+  });
+});
+
+describe('normalizeSelection (loaded state)', () => {
+  it('moves a plane selection and wrong-side refs to valid defaults with a notice', () => {
+    const s = base();
+    const l = s.stackup.layers.find((x) => x.id === 'cu5')!;
     if (l.kind === 'copper') l.role = 'plane';
-    const r = reducer(s, { type: 'setStackup', stackup: st });
-    const id = r.state.calc.layerId;
-    const sel = r.state.stackup.layers.find((x) => x.id === id)!;
+    const r = normalizeSelection(s);
+    const sel = r.state.stackup.layers.find((x) => x.id === r.state.calc.layerId)!;
     expect(sel.kind === 'copper' && sel.role !== 'plane').toBe(true);
     expect(r.notice).toMatch(/plane/);
   });
-
-  it('loading a stackup where a reference is on the wrong side resets the references with a notice', () => {
+  it('resets refs on the wrong side', () => {
     const s = base();
-    s.calc.refAbove = 'cu6'; // below cu5: wrong side once loaded
-    const r = reducer(s, { type: 'setStackup', stackup: structuredClone(s.stackup) });
-    const d = defaultRefs(r.state.stackup, 'cu5');
-    expect(r.state.calc.refAbove).toBe(d.above);
+    s.calc.refAbove = 'cu6';
+    const r = normalizeSelection(s);
+    expect(r.state.calc.refAbove).toBe(defaultRefs(s.stackup, 'cu5').above);
     expect(r.notice).toMatch(/reference/i);
+  });
+  it('leaves a valid selection untouched', () => {
+    const s = base();
+    const r = normalizeSelection(s);
+    expect(r.state).toBe(s);
+    expect(r.notice).toBeUndefined();
   });
 });

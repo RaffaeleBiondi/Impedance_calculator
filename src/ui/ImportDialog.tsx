@@ -26,7 +26,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
     try { text = await readText(f); } catch { setErrors(['Could not read the file.']); return; }
     if (/\.json$/i.test(f.name)) {
       const r = parseStackupJson(text);
-      if (r.ok) { dispatch({ type: 'setStackup', stackup: r.stackup }); onClose(); }
+      if (r.ok) { dispatch({ type: 'replaceStackup', stackup: r.stackup }); onClose(); }
       else setErrors(r.errors);
       return;
     }
@@ -37,7 +37,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 
   const confirm = () => {
     if (!review) return;
-    dispatch({ type: 'setStackup', stackup: review.stackup });
+    dispatch({ type: 'replaceStackup', stackup: review.stackup });
     onClose();
   };
 

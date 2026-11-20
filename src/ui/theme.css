@@ -15,7 +15,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(
 .app { max-width: 1400px; margin: 0 auto; padding: 16px; }
 .top h1 { margin: 0; font-family: var(--cond); font-size: 26px; color: var(--accent); }
 .top p { margin: 2px 0 12px; color: var(--muted); }
-.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; margin-bottom: 16px; min-width: 0; }
 h2 { margin: 0 0 10px; font-family: var(--cond); font-size: 18px; }
@@ -44,10 +44,18 @@ tr.sel td { background: var(--sel); }
 td.act { text-align: right; }
 td.act button + button { margin-left: 2px; }
 .cuopts { white-space: normal; }
+/* Stackup editor: every column and the row actions fit the editor panel at 1280 px without inner scrolling. */
+table.layers th, table.layers td { padding: 3px 3px; }
+table.layers input.name { width: 5em; }
+table.layers input.len { width: 4.6em; }
+table.layers input.num { width: 4.2em; }
+table.layers .matpick select { max-width: 6.8em; }
+table.layers .acts { display: inline-grid; grid-template-columns: repeat(3, max-content); gap: 2px; }
+table.layers td.act .acts button { margin-left: 0; }
 .cuopts > * { margin-right: 10px; }
 .rule { display: inline-flex; gap: 4px; align-items: center; }
 .maskgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-fieldset { border: 1px solid var(--line); border-radius: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+fieldset { border: 1px solid var(--line); border-radius: 4px; display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .hint { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
 .issues { color: var(--warn); font-size: 13px; padding-left: 18px; }
 .notice { display: flex; justify-content: space-between; gap: 8px; align-items: center; background: var(--sel); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
@@ -66,7 +74,7 @@ table.mat td.src { white-space: normal; max-width: 22em; font-size: 12px; }
 .top .titles p { margin-bottom: 0; }
 .themetoggle { display: inline-flex; gap: 2px; }
 .notes li { margin-bottom: 6px; }
-.status-pass { color: #2e7d32; } .status-dev { color: var(--accent); } .status-nv { color: var(--muted); }
+.status-pass { color: var(--ok); } .status-dev { color: var(--accent); } .status-nv { color: var(--muted); }
 details.fold > summary, details.more > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; color: var(--ink); }
 details.fold > summary { font-family: var(--cond); font-size: 16px; font-weight: 600; }
 details.more > summary { font-size: 12px; color: var(--muted); margin: 4px 0; }
@@ -75,11 +83,12 @@ details.fold > summary::before, details.more > summary::before { content: ""; wi
 details.fold[open] > summary::before, details.more[open] > summary::before { transform: rotate(45deg); }
 details.fold > summary:focus-visible, details.more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 details.fold[open] > summary { margin-bottom: 6px; }
-.tools { display: grid; gap: 18px; }
+.tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.tools > * { min-width: 0; }
 .tools h3 { margin: 0 0 6px; }
 input.n { width: 4.5em; }
 .warn { color: var(--warn); }
-.layerpick .lp { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+.layerpick .lp { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-right: 10px; }
 .layerpick details.more { display: inline-block; }
 .layerpick details.more[open] select { margin-left: 2px; }
 .sweepchart { width: 100%; max-width: 760px; height: auto; display: block; }

@@ -21,7 +21,7 @@ const cases: [string, () => Check, Status][] = [
   ['V10a embedded microstrip, cover 1e-6 equals microstrip ≤ 0.1 %', v10a, 'pass'],
   ['V10b embedded microstrip Z0 within ±3 %', () => v10b(), 'pass'],
   ['V10c embedded microstrip εeff (deviation, FD-backed)', () => v10c(), 'deviation-recorded'],
-  ['V11 CPW without ground vs exact conformal map ≤ 0.3 %, dom 1 and 2', v11, 'pass'],
+  ['V11 CPW without ground vs exact conformal map ≤ 0.3 % at dom 1 (dom 2 recorded)', v11, 'pass'],
   ['V12a CPW on a finite substrate (~1 %, deviation FD-backed)', v12a, 'deviation-recorded'],
   ['V12b CPWG (~1 %, deviation FD-backed)', v12b, 'deviation-recorded'],
   ['V14 dielectric loss: exact homogeneous stripline ≤ 0.1 %, microstrip identity ≤ 0.5 %', v14, 'pass'],

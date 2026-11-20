@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import { usePool } from './usePool';
 import { LenInput } from './LenInput';
 import { SweepChart, type SweepPoint } from './SweepChart';
 import { buildReq } from './reqs';
+import { displayText } from './synthText';
 import type { AnalyzeResult } from '../solver/engine';
 
 const zOf = (r: AnalyzeResult): number | null => (!r.ok ? null : r.kind === 'se' ? r.r.Z0 : r.r.Zdiff);
 
 export function Sweep() {
-  const { state } = useStore();
+  const { state, stackupRev } = useStore();
   const pool = usePool();
   const c = state.calc;
   const [param, setParam] = useState<'W' | 'S'>('W');
@@ -30,6 +31,24 @@ export function Sweep() {
     setFrom(base * 0.5); setTo(base * 2);
   };
 
+  // A gap sweep needs a pair: back to W (re-based) when the line becomes single-ended.
+  useEffect(() => { if (c.type === 'se' && param === 'S') pick('W'); }, [c.type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Any change to what the curve was computed for, or a stackup replacement, drops it (and aborts a running sweep), as in the width table.
+  // The swept dimension itself is not part of it: its calculator value is replaced by the sweep values.
+  const fixed = param === 'W' ? (c.type === 'diff' ? c.S : null) : c.W;
+  const gG = c.cpw ? c.G : null;
+  const sig = useMemo(
+    () => JSON.stringify([stackupRev, state.stackup, c.layerId, c.refAbove, c.refBelow, c.type, gG, fixed, c.q, param]),
+    [stackupRev, state.stackup, c.layerId, c.refAbove, c.refBelow, c.type, gG, fixed, c.q, param],
+  );
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    cancelRef.current?.();
+    setPts([]); setErr('');
+  }, [sig]);
+
   const run = () => {
     const count = Math.max(2, Math.min(200, Math.round(n) || 2));
     const req = buildReq(state, { layerId: c.layerId, refAbove: c.refAbove, refBelow: c.refBelow },
@@ -43,7 +62,7 @@ export function Sweep() {
       .then((rs) => {
         setPts(xs.map((x, i) => ({ x, z: zOf(rs[i]) })));
         const bad = rs.find((r) => !r.ok);
-        if (bad && !bad.ok) setErr(bad.error);
+        if (bad && !bad.ok) setErr(displayText(bad.error, state.unit));
       })
       .catch((e) => { if (e !== 'cancelled') setErr(e instanceof Error ? e.message : String(e)); })
       .finally(() => { setProg(null); cancelRef.current = null; });

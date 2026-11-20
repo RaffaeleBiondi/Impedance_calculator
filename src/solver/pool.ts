@@ -20,6 +20,10 @@ interface Slot { worker: WorkerLike; task: Task | null; dead: boolean }
 
 const MAX_SPAWN_FAILURES = 3;
 
+/** Calculator jobs: queued ahead of batch jobs (sweep points, table cells) so an edit never waits behind a batch. */
+const INTERACTIVE: ReadonlySet<Job['op']> = new Set<Job['op']>(['analyze', 'findW', 'findS', 'compact']);
+export const isInteractive = (job: Job): boolean => INTERACTIVE.has(job.op);
+
 export class SolverPool {
   private slots: Slot[] = [];
   private queue: Task[] = [];
@@ -105,7 +109,15 @@ export class SolverPool {
     const promise = new Promise<T>((resolve, reject) => { task = { id: this.nextId++, job, resolve, reject }; });
     if (this.disposed) task.reject(new Error('pool disposed'));
     else if (this.slots.every((s) => s.dead)) task.reject(new Error('solver worker failed to start'));
-    else { this.queue.push(task); this.pump(); }
+    else {
+      if (isInteractive(job)) {
+        // after the last queued interactive job, so interactive jobs stay FIFO among themselves
+        let i = this.queue.length;
+        while (i > 0 && !isInteractive(this.queue[i - 1].job)) i--;
+        this.queue.splice(i, 0, task);
+      } else this.queue.push(task);
+      this.pump();
+    }
     return { task, promise };
   }
 

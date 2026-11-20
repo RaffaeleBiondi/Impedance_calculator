@@ -70,16 +70,22 @@ export function checkAppState(v: unknown): Dec {
   }
 }
 
+/** Share links are untrusted input: refuse oversized ones before and after decompression. */
+export const MAX_HASH_CHARS = 100_000;
+export const MAX_STATE_JSON_CHARS = 2 * 1024 * 1024;
+
 export function encodeHash(st: AppState): string {
   return '#s=' + compressToEncodedURIComponent(JSON.stringify(st));
 }
 
 export function decodeHash(hash: string): Dec {
   try {
+    if (hash.length > MAX_HASH_CHARS) return { ok: false, error: 'Share link too long' };
     const m = /^#?s=(.*)$/.exec(hash);
     if (!m || !m[1]) return { ok: false, error: 'No state in URL hash' };
     const json = decompressFromEncodedURIComponent(m[1]);
     if (!json) return { ok: false, error: 'URL state could not be decompressed' };
+    if (json.length > MAX_STATE_JSON_CHARS) return { ok: false, error: 'Share link state too large' };
     let v: unknown;
     try { v = JSON.parse(json); } catch { return { ok: false, error: 'URL state is not valid JSON' }; }
     return checkAppState(v);

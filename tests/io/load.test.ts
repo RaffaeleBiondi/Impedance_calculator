@@ -54,3 +54,22 @@ describe('loadInitialState both invalid', () => {
     expect(r.notice).toBeTruthy();
   });
 });
+
+describe('loadInitialState keeps a shared selection only when it is valid', () => {
+  it('a valid share link keeps its own layer and references', () => {
+    const s = defaultAppState();
+    s.calc.layerId = 'cu7'; s.calc.refAbove = 'cu6'; s.calc.refBelow = 'cu8';
+    const r = loadInitialState(encodeHash(s), memStore());
+    expect([r.state.calc.layerId, r.state.calc.refAbove, r.state.calc.refBelow]).toEqual(['cu7', 'cu6', 'cu8']);
+    expect(r.notice).toBeUndefined();
+  });
+  it('a share link selecting a plane moves to a signal layer with a notice', () => {
+    const s = defaultAppState();
+    s.calc.layerId = 'cu4'; // In4.Cu is a plane in the example
+    const r = loadInitialState(encodeHash(s), memStore());
+    expect(r.source).toBe('hash');
+    const sel = r.state.stackup.layers.find((l) => l.id === r.state.calc.layerId)!;
+    expect(sel.kind === 'copper' && sel.role !== 'plane').toBe(true);
+    expect(r.notice).toMatch(/plane/);
+  });
+});

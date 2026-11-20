@@ -5,18 +5,22 @@ import { loadInitialState } from '../io/load';
 import { encodeHash } from '../io/urlState';
 import { KEYS, storage } from '../io/storage';
 
-interface Shell { app: AppState; notice?: string }
+/** `rev` counts whole-stackup replacements, so views can drop local state keyed by layer ids. */
+interface Shell { app: AppState; notice?: string; rev: number }
 export type StoreAction = Action | { type: 'dismissNotice' };
 
 function shellReducer(s: Shell, a: StoreAction): Shell {
-  if (a.type === 'dismissNotice') return { app: s.app, notice: undefined };
+  if (a.type === 'dismissNotice') return { ...s, notice: undefined };
   const r = reducer(s.app, a);
-  return { app: r.state, notice: r.notice };
+  const replaced = a.type === 'replaceStackup' || a.type === 'resetExample';
+  return { app: r.state, notice: r.notice, rev: replaced ? s.rev + 1 : s.rev };
 }
 
 interface Ctx {
   state: AppState;
   notice?: string;
+  /** Increments on every whole-stackup replacement (import, named load, reset to example). */
+  stackupRev: number;
   dispatch: (a: StoreAction) => void;
 }
 const StoreCtx = createContext<Ctx | null>(null);
@@ -26,11 +30,11 @@ export const AUTOSAVE_DEBOUNCE_MS = 500;
 function init(): Shell {
   const hash = typeof location !== 'undefined' ? location.hash : '';
   const r = loadInitialState(hash, storage);
-  return { app: r.state, notice: r.notice };
+  return { app: r.state, notice: r.notice, rev: 0 };
 }
 
 export function StoreProvider({ children, initial }: { children: ReactNode; initial?: AppState }) {
-  const [shell, dispatch] = useReducer(shellReducer, undefined, () => (initial ? { app: initial } : init()));
+  const [shell, dispatch] = useReducer(shellReducer, undefined, () => (initial ? { app: initial, rev: 0 } : init()));
   const first = useRef(true);
 
   useEffect(() => {
@@ -42,7 +46,7 @@ export function StoreProvider({ children, initial }: { children: ReactNode; init
     return () => clearTimeout(t);
   }, [shell.app]);
 
-  const value = useMemo<Ctx>(() => ({ state: shell.app, notice: shell.notice, dispatch }), [shell]);
+  const value = useMemo<Ctx>(() => ({ state: shell.app, notice: shell.notice, stackupRev: shell.rev, dispatch }), [shell]);
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
 

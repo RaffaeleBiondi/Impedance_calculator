@@ -8,7 +8,8 @@ type Layer = CopperLayer | DielectricLayer;
 
 export type Action =
   | { type: 'setUnit'; unit: Unit }
-  | { type: 'setStackup'; stackup: Stackup }
+  /** Whole-stackup replacement (import, named load): the selection is reset. In-place edits use the layer actions. */
+  | { type: 'replaceStackup'; stackup: Stackup }
   | { type: 'renameStackup'; name: string }
   | { type: 'addLayer'; after: string; kind: 'copper' | 'dielectric' }
   | { type: 'removeLayer'; id: string }
@@ -81,6 +82,16 @@ function leavePlane(state: AppState, verb: 'is' | 'is now'): Result {
   };
 }
 
+/**
+ * A loaded state (share link, autosave) carries its own selection: keep it when valid, otherwise move a plane
+ * selection to the nearest signal layer and wrong-side references to the defaults, with a notice.
+ */
+export function normalizeSelection(state: AppState): Result {
+  const lp = leavePlane(state, 'is');
+  if (lp.notice) return lp;
+  return checkRefs(state);
+}
+
 function withStackup(state: AppState, stackup: Stackup): AppState {
   return { ...state, stackup };
 }
@@ -93,29 +104,19 @@ export function reducer(state: AppState, a: Action): Result {
     case 'renameStackup':
       return { state: withStackup(state, { ...state.stackup, name: a.name }) };
 
-    case 'setStackup': {
-      let next: AppState = { ...state, stackup: a.stackup, tableLayers: tableDefault(a.stackup) };
-      const cs = coppers(a.stackup);
-      if (!cs.some((c) => c.id === state.calc.layerId) && cs.length) {
-        const id = nearestSignal(a.stackup.layers, 0) ?? cs[0].id;
-        const r = defaultRefs(a.stackup, id);
-        next = { ...next, calc: { ...state.calc, layerId: id, refAbove: r.above, refBelow: r.below } };
-      } else {
-        const ids = new Set(a.stackup.layers.map((l) => l.id));
-        const c = state.calc;
-        next = {
-          ...next,
-          calc: {
-            ...c,
-            refAbove: c.refAbove && ids.has(c.refAbove) ? c.refAbove : defaultRefs(a.stackup, c.layerId).above,
-            refBelow: c.refBelow && ids.has(c.refBelow) ? c.refBelow : defaultRefs(a.stackup, c.layerId).below,
-          },
-        };
-      }
-      // A selected layer that is a plane, or references on the wrong side, fall back with a notice.
-      const lp = leavePlane(next, 'is');
-      if (lp.notice) return lp;
-      return checkRefs(next);
+    case 'replaceStackup': {
+      // Layer ids of a new stackup carry no meaning from the old one: never keep the old selection,
+      // even when an id happens to match. Pick the top-most signal/mixed layer and its default references.
+      const st = a.stackup;
+      const next: AppState = { ...state, stackup: st, tableLayers: tableDefault(st) };
+      const id = nearestSignal(st.layers, 0);
+      if (!id) return { state: next, notice: 'Stackup replaced; it has no copper layer to calculate on.' };
+      const r = defaultRefs(st, id);
+      const name = (st.layers.find((l) => l.id === id) as CopperLayer).name;
+      return {
+        state: { ...next, calc: { ...state.calc, layerId: id, refAbove: r.above, refBelow: r.below } },
+        notice: `Stackup replaced; calculating on ${name} with default references.`,
+      };
     }
 
     case 'addLayer': {

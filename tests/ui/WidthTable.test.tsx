@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { StoreProvider } from '../../src/state/store';
+import { StoreProvider, useStore, type StoreAction } from '../../src/state/store';
 import { defaultAppState } from '../../src/state/types';
 import { WidthTable } from '../../src/ui/WidthTable';
 
@@ -92,5 +92,51 @@ describe('WidthTable', () => {
     const d = (await screen.findAllByText('Why?'))[0].closest('details')!;
     expect(d).not.toHaveAttribute('open');
     expect(d).toHaveTextContent('Longer explanation.');
+  });
+
+  it('shows failure text in the display unit with Ω (mil), not the worker text', async () => {
+    const s = defaultAppState();
+    s.unit = 'mil';
+    s.calc.fmin = 0.127;
+    render(<StoreProvider initial={s}><WidthTable /></StoreProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Run table' }));
+    const b = h.batches[0];
+    const main = { ok: false, reason: 'below-fab', zRange: [38.2, 49.5], message: '50.0 ohm needs W 0.090 mm, below the fab minimum 0.127 mm' };
+    const compact = { ok: false, reason: 'out-of-range', zRange: [60, 80], message: 'No geometry within +/-5 % of 50 ohm' };
+    await act(async () => { b.d.resolve(b.jobs.map(() => ({ main, compact }))); });
+    const grid = await screen.findByTestId('width-grid');
+    expect(grid.textContent).toContain('50 Ω needs W below the fab minimum 5.00 mil; W ≥ 5.00 mil gives 38.2 to 49.5 Ω');
+    expect(grid.textContent).toContain('No geometry within ±5 % of 50 Ω: Z reaches 60.0 to 80.0 Ω');
+    expect(grid.textContent).not.toMatch(/\bmm\b|\bohm\b/);
+  });
+
+  it('prints a deviation that rounds to zero as 0.00%, never -0.00%', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Run table' }));
+    const b = h.batches[0];
+    await act(async () => {
+      b.d.resolve(b.jobs.map((j) => {
+        const t = (j as { target: number }).target;
+        return { main: { ok: true, W: 0.135, z: t * (1 - 0.00004) }, compact: { ok: true, W: 0.135 + 1e-7, z: t } };
+      }));
+    });
+    const grid = await screen.findByTestId('width-grid');
+    expect(grid.textContent).not.toMatch(/-0(\.0+)?%/);
+    expect(grid.textContent).toContain('0.00%');
+  });
+});
+
+describe('WidthTable reference overrides', () => {
+  let dispatch: (a: StoreAction) => void = () => {};
+  function Grab() { dispatch = useStore().dispatch; return null; }
+
+  it('are dropped when the whole stackup is replaced (ids mean nothing in the new one)', () => {
+    render(<StoreProvider initial={defaultAppState()}><Grab /><WidthTable /></StoreProvider>);
+    const sel = () => screen.getByLabelText('Ref above of In5.Cu') as HTMLSelectElement;
+    expect(sel().value).toBe('cu4');
+    fireEvent.change(sel(), { target: { value: 'cu1' } });
+    expect(sel().value).toBe('cu1');
+    act(() => dispatch({ type: 'replaceStackup', stackup: defaultAppState().stackup }));
+    expect(sel().value).toBe('cu4');
   });
 });

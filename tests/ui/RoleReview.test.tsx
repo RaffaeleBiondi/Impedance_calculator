@@ -50,10 +50,52 @@ describe('KiCad import flow', () => {
     expect(list.querySelectorAll('li').length).toBeGreaterThan(0);
   });
 
+  it('shows stackup validation errors in the review step', async () => {
+    render(<App />);
+    await openAndPick('s.kicad_pcb', readFileSync('tests/fixtures/kicad9-4layer-sublayers.kicad_pcb', 'utf8'));
+    const list = await screen.findByLabelText('Stackup errors');
+    expect(list.textContent).toMatch(/er must be a finite number/);
+    expect(screen.getByRole('button', { name: 'Use this stackup' })).toBeEnabled();
+  });
+
   it('shows an error for a non-KiCad file', async () => {
     render(<App />);
     await openAndPick('x.kicad_pcb', '(foo)');
     expect((await screen.findByLabelText('Import errors')).textContent).toMatch(/layers/);
+  });
+});
+
+describe('whole-stackup replacement (fix wave B4, C14)', () => {
+  const six = readFileSync('tests/fixtures/kicad8-6layer.kicad_pcb', 'utf8');
+  const shown = (label: string) => {
+    const el = screen.getByLabelText(label) as HTMLSelectElement;
+    return el.value === '' ? '' : el.options[el.selectedIndex].text;
+  };
+
+  it('importing the 6-layer board with In3.Cu as plane selects F.Cu with its default reference, not B.Cu', async () => {
+    render(<App />);
+    expect(shown('Signal layer')).toBe('In5.Cu');
+    await openAndPick('six.kicad_pcb', six);
+    await screen.findByLabelText('Role of In3.Cu');
+    fireEvent.change(screen.getByLabelText('Role of In3.Cu'), { target: { value: 'plane' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use this stackup' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(shown('Signal layer')).toBe('F.Cu');
+    expect(shown('Reference above')).toBe('');
+    expect(shown('Reference below')).toBe('In1.Cu'); // In1.Cu is "power" -> plane
+    expect(screen.getByRole('status').textContent).toMatch(/F\.Cu/);
+  });
+
+  it('a successful import clears an earlier "Import failed" message in the editor', async () => {
+    const { container } = render(<App />);
+    const json = container.querySelector('input[type=file][accept="application/json,.json"]') as HTMLInputElement;
+    fireEvent.change(json, { target: { files: [new File(['{"schema":"nope"}'], 'bad.json')] } });
+    expect(await screen.findByText(/^Import failed/)).toBeInTheDocument();
+    await openAndPick('six.kicad_pcb', six);
+    await screen.findByLabelText('Role of In3.Cu');
+    fireEvent.click(screen.getByRole('button', { name: 'Use this stackup' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText(/^Import failed/)).toBeNull();
   });
 });
 
