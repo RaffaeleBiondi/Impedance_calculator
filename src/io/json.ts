@@ -54,7 +54,7 @@ export function checkStackup(v: unknown): Res {
         }
       }
     });
-    if (!isEtch(et.rule)) errors.push('Stackup etch rule needs by fraction|factor and a value > 0');
+    if (!isEtch((et as { rule: unknown }).rule)) errors.push('Stackup etch rule needs by fraction|factor and a value > 0');
     if (errors.length) return { ok: false, errors };
     const s = v as unknown as Stackup;
     const issues = validateStackup(s).filter((x) => x.level === 'error');
