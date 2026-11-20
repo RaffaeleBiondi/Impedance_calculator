@@ -39,9 +39,6 @@ export function validateStackup(s: Stackup): StackupIssue[] {
     if (i > 0 && l.kind === 'copper' && L[i - 1].kind === 'copper') {
       err('Two copper layers with no dielectric between them', l.id);
     }
-    if (i > 0 && l.kind === 'dielectric' && L[i - 1].kind === 'dielectric') {
-      err('Two adjacent dielectric layers (merge them into one)', l.id);
-    }
     if (l.kind === 'copper') {
       if (!Number.isFinite(l.t) || l.t <= 0) err('Copper thickness must be a finite number > 0', l.id);
     } else {

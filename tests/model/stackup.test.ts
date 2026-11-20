@@ -21,6 +21,9 @@ describe('validateStackup', () => {
     const r = validateStackup(mk([di('d'), cu('a'), di('e'), cu('b')]));
     expect(r.some((m) => m.level === 'error')).toBe(true);
   });
+  it('consecutive dielectrics (sub-layers) are valid', () => {
+    expect(validateStackup(mk([cu('a'), di('d1'), di('d2'), cu('b')]))).toEqual([]);
+  });
   it('NaN values -> error', () => {
     const r = validateStackup(mk([cu('a'), { ...di('d'), er: NaN }, cu('b')]));
     expect(r.some((m) => m.level === 'error' && m.layerId === 'd')).toBe(true);
@@ -33,6 +36,13 @@ describe('defaultRefs / coppers', () => {
   it('cu5', () => expect(defaultRefs(s, 'cu5')).toEqual({ above: 'cu4', below: 'cu6' }));
   it('cu0', () => expect(defaultRefs(s, 'cu0')).toEqual({ above: null, below: 'cu1' }));
   it('cu2', () => expect(defaultRefs(s, 'cu2')).toEqual({ above: 'cu1', below: 'cu3' }));
+});
+
+describe('refs across sub-layers', () => {
+  it('defaultRefs skips consecutive dielectrics', () => {
+    const s = mk([{ ...cu('a'), role: 'plane' }, di('d1'), di('d2'), cu('b'), di('d3'), { ...cu('c'), role: 'plane' }]);
+    expect(defaultRefs(s, 'b')).toEqual({ above: 'a', below: 'c' });
+  });
 });
 
 describe('etchReduction', () => {
