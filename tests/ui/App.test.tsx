@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from '../../src/ui/App';
+
+// jsdom has no Worker: the shared solver pool is replaced by an inert one whose jobs never settle.
+vi.mock('../../src/ui/usePool', () => {
+  const pending = () => ({ promise: new Promise<never>(() => {}), cancel: () => {} });
+  const pool = { run: pending, runBatch: pending, dispose: () => {} };
+  return { usePool: () => pool };
+});
 
 describe('App shell', () => {
   it('renders the example stackup and the three slots', () => {

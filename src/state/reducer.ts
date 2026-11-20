@@ -47,6 +47,25 @@ function nearestSignal(layers: Layer[], at: number): string | null {
   return pick((c) => c.role !== 'plane') ?? pick(() => true);
 }
 
+/** References that no longer sit on their side of the trace (or are gone) are reset to the defaults. */
+function checkRefs(state: AppState): Result {
+  const L = state.stackup.layers;
+  const c = state.calc;
+  const i = L.findIndex((l) => l.id === c.layerId);
+  if (i < 0) return { state };
+  const ok = (id: string | null, side: 'above' | 'below') => {
+    if (id === null) return true;
+    const j = L.findIndex((l) => l.id === id);
+    return j >= 0 && L[j].kind === 'copper' && (side === 'above' ? j < i : j > i);
+  };
+  if (ok(c.refAbove, 'above') && ok(c.refBelow, 'below')) return { state };
+  const r = defaultRefs(state.stackup, c.layerId);
+  return {
+    state: { ...state, calc: { ...c, refAbove: r.above, refBelow: r.below } },
+    notice: 'A reference is no longer on its side of the trace; references were reset to the defaults.',
+  };
+}
+
 function withStackup(state: AppState, stackup: Stackup): AppState {
   return { ...state, stackup };
 }
@@ -147,7 +166,7 @@ export function reducer(state: AppState, a: Action): Result {
       const j = a.dir === 'up' ? i - 1 : i + 1;
       if (i < 0 || j < 0 || j >= L.length) return { state };
       [L[i], L[j]] = [L[j], L[i]];
-      return { state: withStackup(state, { ...state.stackup, layers: L }) };
+      return checkRefs(withStackup(state, { ...state.stackup, layers: L }));
     }
 
     case 'updateLayer': {
@@ -158,6 +177,22 @@ export function reducer(state: AppState, a: Action): Result {
         const isPlane = (a.patch as Partial<CopperLayer>).role === 'plane';
         if (isPlane) tl.delete(a.id);
         next = { ...next, tableLayers: [...tl] };
+        if (isPlane && state.calc.layerId === a.id) {
+          // The selected trace layer became a plane: move to the nearest signal/mixed layer.
+          const layers = next.stackup.layers;
+          const at = layers.findIndex((l) => l.id === a.id);
+          const id = nearestSignal(layers, at);
+          const pick = id && id !== a.id ? (layers.find((l) => l.id === id) as CopperLayer) : null;
+          if (pick) {
+            const r = defaultRefs(next.stackup, pick.id);
+            const old = (layers[at] as CopperLayer).name;
+            return {
+              state: { ...next, calc: { ...next.calc, layerId: pick.id, refAbove: r.above, refBelow: r.below } },
+              notice: `${old} is now a plane; selection moved to ${pick.name} and references were reset.`,
+            };
+          }
+          return { state: next, notice: `${(layers[at] as CopperLayer).name} is now a plane and no signal layer is left.` };
+        }
       }
       return { state: next };
     }
