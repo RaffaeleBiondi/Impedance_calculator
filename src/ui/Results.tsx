@@ -4,7 +4,6 @@ import type { CalcState } from '../state/types';
 import type { Unit } from '../model/units';
 import { CrossSectionDiagram, geometryLine } from './CrossSectionDiagram';
 import { FieldPlot } from './FieldPlot';
-import { topologyLabel } from './topology';
 import { lenText } from './lenText';
 
 /** Deviation chip class as in the original page: within tol ok, within 2·tol warn, beyond bad (dev is a fraction, tol in %). */
@@ -23,9 +22,11 @@ interface Props {
   calc: CalcState;
   unit: Unit;
   names: { layer: string; above: string | null; below: string | null };
+  /** Frequency the loss was computed at (defaults to calc.freqGHz). */
+  freqGHz?: number;
 }
 
-export function Results({ result, line, calc, unit, names }: Props) {
+export function Results({ result, line, calc, unit, names, freqGHz }: Props) {
   if (result && !result.ok) return <div className="msg bad" role="alert">{result.error}</div>;
   const diff = result?.kind === 'diff';
   const z = !result ? NaN : result.kind === 'se' ? result.r.Z0 : result.r.Zdiff;
@@ -50,7 +51,7 @@ export function Results({ result, line, calc, unit, names }: Props) {
     if (!oddOnly) items.push(['Coupling', fmt(r.kb, 3)]);
   }
   if (result?.ok && result.lossDbPerM != null) {
-    items.push([`Loss @ ${+calc.freqGHz.toFixed(3)} GHz`, `${fmt(result.lossDbPerM, 2)} dB/m · ${fmt(result.lossDbPerM * IN_PER_M, 3)} dB/in`]);
+    items.push([`Loss @ ${+(freqGHz ?? calc.freqGHz).toFixed(3)} GHz`, `${fmt(result.lossDbPerM, 2)} dB/m · ${fmt(result.lossDbPerM * IN_PER_M, 3)} dB/in`]);
   }
   if (result?.ok && Number.isFinite(tpd) && calc.L1 != null) {
     items.push(['Delay', `${fmt(delayPs(tpd, calc.L1), 1)} ps`]);
@@ -95,11 +96,16 @@ export function Results({ result, line, calc, unit, names }: Props) {
       )}
       {xs && (
         <>
-          <div className="topo">{topologyLabel(xs.topology, diff, line.G != null)}</div>
           <p className="geo">
             {geometryLine(xs, refNames, unit)}
             {geom.Wtop != null ? ` · W_top ${lenText(geom.Wtop, unit)}` : ''}
           </p>
+          {geometryLine(xs, refNames, unit, false) !== geometryLine(xs, refNames, unit) && (
+            <details className="more">
+              <summary>Full stack</summary>
+              <p className="geo">{geometryLine(xs, refNames, unit, false)}</p>
+            </details>
+          )}
           {xs.warnings.map((w) => <p key={w} className="warnline">⚠ {w}</p>)}
           {xs.notes.length > 0 && (
             <details className="more">

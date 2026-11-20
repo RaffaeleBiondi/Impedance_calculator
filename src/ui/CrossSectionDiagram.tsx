@@ -12,7 +12,8 @@ export type Row =
   | { kind: 'air'; open: boolean } // open: an inner/base side with no reference
   | { kind: 'mask'; t: number; er: number } // flat mask on an open board surface
   | { kind: 'slab'; label: string; t: number; er: number; cut: boolean }
-  | { kind: 'trace'; T: number };
+  | { kind: 'trace'; T: number }
+  | { kind: 'more'; n: number; t: number }; // several slabs of an open side, summarised
 
 export interface RefNames { above: string | null; below: string | null }
 
@@ -43,14 +44,37 @@ export function stackRows(xs: CrossSection, names: RefNames): Row[] {
   return xs.flipped ? up : up.reverse();
 }
 
-/** One-line description of the bands, top to bottom. */
-export function geometryLine(xs: CrossSection, names: RefNames, unit: Unit): string {
-  return stackRows(xs, names).map((r) => {
+/**
+ * On an open side (no reference, slabs running to the board surface) keep the `keep` slabs nearest the trace and
+ * summarise the rest as one 'more' band. Referenced sides are left as they are.
+ */
+export function compactRows(rows: Row[], keep = 2): Row[] {
+  const ti = rows.findIndex((r) => r.kind === 'trace');
+  if (ti < 0) return rows;
+  const side = (nearFirst: Row[]): Row[] => {
+    const last = nearFirst[nearFirst.length - 1];
+    if (!last || last.kind !== 'air' || !last.open) return nearFirst;
+    const slabs = nearFirst.filter((r): r is Extract<Row, { kind: 'slab' }> => r.kind === 'slab');
+    if (slabs.length <= keep + 1) return nearFirst;
+    const rest = slabs.slice(keep);
+    const more: Row = { kind: 'more', n: rest.length, t: rest.reduce((a, r) => a + r.t, 0) };
+    return [...slabs.slice(0, keep), more, ...nearFirst.filter((r) => r.kind !== 'slab')];
+  };
+  const above = side(rows.slice(0, ti).reverse()).reverse();
+  const below = side(rows.slice(ti + 1));
+  return [...above, rows[ti], ...below];
+}
+
+/** One-line description of the bands, top to bottom (open sides summarised unless compact is false). */
+export function geometryLine(xs: CrossSection, names: RefNames, unit: Unit, compact = true): string {
+  const rows = stackRows(xs, names);
+  return (compact ? compactRows(rows) : rows).map((r) => {
     switch (r.kind) {
       case 'plane': return r.name;
       case 'air': return r.open ? 'open' : 'air';
       case 'mask': return `mask ${lenText(r.t, unit)} εr ${erText(r.er)}`;
       case 'slab': return `${r.label} ${lenText(r.t, unit)} εr ${erText(r.er)}`;
+      case 'more': return `… ${r.n} layers to surface (${lenText(r.t, unit)})`;
       case 'trace': {
         const m = xs.outer && xs.coverMask ? ` + mask ${lenText(xs.coverMask.t, unit)} εr ${erText(xs.coverMask.er)}` : '';
         return `T ${lenText(r.T, unit)}${m}`;
@@ -70,6 +94,7 @@ function rowHeight(r: Row): number {
     case 'air': return r.open ? 30 : 38;
     case 'mask': return 16;
     case 'trace': return 22;
+    case 'more': return 26;
     case 'slab': return Math.min(60, Math.max(40, r.t * 160));
   }
 }
@@ -86,7 +111,7 @@ export function CrossSectionDiagram({ xs, line, names, unit }: Props) {
   const title = topologyLabel(xs.topology, diff, cpw);
 
   const svg = useMemo(() => {
-    const rows = stackRows(xs, names);
+    const rows = compactRows(stackRows(xs, names));
     const tops: number[] = [];
     let y = 4;
     for (const r of rows) { tops.push(y); y += rowHeight(r); }
@@ -164,6 +189,14 @@ export function CrossSectionDiagram({ xs, line, names, unit }: Props) {
                 </g>
               );
             }
+            case 'more':
+              return (
+                <g key={k}>
+                  <rect x={0} y={y0} width={VW} height={h} style={S('--xs-diel-b')} />
+                  <rect x={1} y={y0 + 1} width={VW - 2} height={h - 2} className="xs-cut" />
+                  <text x={LX} y={mid} dominantBaseline="central" className="xs-lbl muted">{`… ${r.n} layers to surface · ${lenText(r.t, unit)}`}</text>
+                </g>
+              );
             case 'trace': {
               const fill = xs.outer ? '--xs-air' : '--xs-diel-a';
               return (

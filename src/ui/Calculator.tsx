@@ -12,6 +12,7 @@ import { LenInput } from './LenInput';
 import { NumInput } from './NumInput';
 import { Results } from './Results';
 import { unitSuffix } from './lenText';
+import { compactText, failText } from './synthText';
 
 /** Worker reply for findW / findS (SynthResult) and compact (compactWithinTol adds a message on success). */
 type Synth = SynthResult & { message?: string };
@@ -31,6 +32,26 @@ export function buildRequest(s: AppState): AnalyzeRequest {
 type Line = { W: number; S?: number; G?: number | null };
 const lineOf = (r: AnalyzeRequest, W = r.line.W, S = r.line.S): Line =>
   ({ W, S: r.line.type === 'diff' ? S : undefined, G: r.line.G ?? null });
+
+/** Identity of a calculation. Compact mode: W and S are outputs, so they stay out (writing them back must not re-run the search). */
+export function keyFor(r: AnalyzeRequest, c: CalcState): string {
+  return JSON.stringify(c.compact
+    ? { ...r, line: { ...r.line, W: 0, S: 0 }, target: c.target, tol: c.tol, fmin: c.fmin }
+    : r);
+}
+
+type Names = { layer: string; above: string | null; below: string | null };
+/** Layer names of a request, taken when the request is made (not from live state). */
+function namesOf(r: AnalyzeRequest): Names {
+  const name = (id: string | null) => {
+    const l = id ? r.stackup.layers.find((x) => x.id === id) : undefined;
+    return l && l.kind === 'copper' ? l.name : null;
+  };
+  return { layer: name(r.sel.layerId) ?? '', above: name(r.sel.refAbove), below: name(r.sel.refBelow) };
+}
+
+/** What the results panel shows, with the inputs it was solved for. */
+interface Shown { result: AnalyzeResult; line: Line; key: string; names: Names; freqGHz?: number }
 
 interface Msg { text: string; detail?: string; cls: 'ok' | 'bad' }
 
@@ -68,11 +89,12 @@ export function Calculator() {
   const pool = usePool();
   const { stackup, calc, unit } = state;
   const [msg, setMsg] = useState<Msg | null>(null);
-  const [shown, setShown] = useState<{ result: AnalyzeResult; line: Line } | null>(null);
+  const [shown, setShown] = useState<Shown | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const handle = useRef<{ cancel(): void } | null>(null);
   const seq = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shownKey = useRef<string | null>(null);
 
   const set = (patch: Partial<CalcState>) => dispatch({ type: 'setCalc', patch });
   const edit = (patch: Partial<CalcState>) => { setMsg(null); set(patch); };
@@ -90,16 +112,16 @@ export function Calculator() {
   const u = unitSuffix(unit);
 
   const req = useMemo(() => buildRequest(state), [stackup, calc]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Compact mode: W and S are outputs, so they stay out of the key (writing them back must not re-run the search).
-  const key = useMemo(
-    () => JSON.stringify(calc.compact
-      ? { ...req, line: { ...req.line, W: 0, S: 0 }, target: calc.target, tol: calc.tol, fmin: calc.fmin }
-      : req),
-    [req, calc.compact, calc.target, calc.tol, calc.fmin],
-  );
+  const key = useMemo(() => keyFor(req, calc), [req, calc]);
+  const keyRef = useRef(key);
+  keyRef.current = key;
 
-  /** Run one job, superseding (cancelling) the previous one; stale replies are dropped. */
-  const start = <T,>(job: Job, label: string, onOk: (res: T) => void) => {
+  const show = (v: Shown | null) => { shownKey.current = v?.key ?? null; setShown(v); };
+  const shownOf = (r: AnalyzeRequest, result: AnalyzeResult, k: string, W?: number, S?: number): Shown =>
+    ({ result, line: lineOf(r, W, S), key: k, names: namesOf(r), freqGHz: r.freqGHz });
+
+  /** Run one job, superseding (cancelling) the previous one; replies for superseded jobs are dropped. */
+  const start = <T,>(job: Job, label: string, onOk: (res: T) => void, onErr?: () => void) => {
     handle.current?.cancel();
     const my = ++seq.current;
     setBusy(label);
@@ -110,57 +132,64 @@ export function Calculator() {
       .catch((e: unknown) => {
         if (my !== seq.current || e === 'cancelled') return;
         setMsg({ text: `Calculation failed: ${e instanceof Error ? e.message : String(e)}`, cls: 'bad' });
+        onErr?.();
       })
       .finally(() => { if (my === seq.current) { setBusy(null); handle.current = null; } });
   };
 
+  const runAnalyze = (r: AnalyzeRequest, k: string) =>
+    start<AnalyzeResult>({ op: 'analyze', req: r }, '…', (res) => show(shownOf(r, res, k)), () => show(null));
+
+  const runCompact = (r: AnalyzeRequest, c: CalcState, k: string) =>
+    start<Synth>({ op: 'compact', req: r, target: c.target, tol: c.tol / 100, fmin: c.fmin }, 'compact…', (res) => {
+      if (res.ok) {
+        set(res.S != null && r.line.type === 'diff' ? { W: res.W, S: res.S } : { W: res.W });
+        show(shownOf(r, res.result, k, res.W, res.S ?? r.line.S));
+        setMsg({ ...compactText(res, r.line.type === 'diff', c.tol, unit), cls: 'ok' });
+      } else {
+        show(null);
+        setMsg({ text: failText(res, { op: 'compact', target: c.target, tolPct: c.tol, fmin: c.fmin, W: r.line.W, unit }), detail: res.detail, cls: 'bad' });
+      }
+    }, () => show(null));
+
   useEffect(() => {
-    const r = req, c = calc;
+    // New inputs: whatever is in flight was computed for older ones, so cancel it and drop its reply.
+    handle.current?.cancel();
+    handle.current = null;
+    seq.current++;
+    setBusy(null);
+    if (shownKey.current === key) return; // already on screen (e.g. written back by a search)
+    const r = req, c = calc, k = key;
     const t = setTimeout(() => {
       timer.current = null;
-      if (c.compact) {
-        start<Synth>({ op: 'compact', req: r, target: c.target, tol: c.tol / 100, fmin: c.fmin }, 'compact…', (res) => {
-          if (res.ok) {
-            set(res.S != null && r.line.type === 'diff' ? { W: res.W, S: res.S } : { W: res.W });
-            setShown({ result: res.result, line: lineOf(r, res.W, res.S ?? r.line.S) });
-            if (res.message) setMsg({ text: res.message, cls: 'ok' });
-          } else {
-            setShown(null);
-            setMsg({ text: res.message, detail: res.detail, cls: 'bad' });
-          }
-        });
-      } else {
-        start<AnalyzeResult>({ op: 'analyze', req: r }, '…', (res) => setShown({ result: res, line: lineOf(r) }));
-      }
+      if (c.compact) runCompact(r, c, k); else runAnalyze(r, k);
     }, DEBOUNCE_MS);
     timer.current = t;
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); if (timer.current === t) timer.current = null; };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => { seq.current++; handle.current?.cancel(); }, []);
 
   const synth = (op: 'findW' | 'findS') => {
     setMsg(null);
-    const r = req, c = calc;
+    const r = req, c = calc, k = key;
     // A pending debounced analysis would cancel the search: drop it (the search uses the same inputs).
-    const hadPending = timer.current != null;
     if (timer.current != null) { clearTimeout(timer.current); timer.current = null; }
-    start<Synth>({ op, req: r, target: c.target }, 'searching…', (res) => {
+    // The search may have superseded the analysis of these inputs: if nothing current is on screen, re-run it.
+    const ensure = () => { if (keyRef.current === k && shownKey.current !== k) runAnalyze(r, k); };
+    start<Synth>({ op, req: r, target: c.target, fmin: c.fmin }, 'searching…', (res) => {
       if (!res.ok) {
-        setMsg({ text: res.message, detail: res.detail, cls: 'bad' });
-        // The dropped analysis still has to run for the edited inputs.
-        if (hadPending) start<AnalyzeResult>({ op: 'analyze', req: r }, '…', (a) => setShown({ result: a, line: lineOf(r) }));
+        setMsg({ text: failText(res, { op, target: c.target, tolPct: c.tol, fmin: c.fmin, W: r.line.W, unit }), detail: res.detail, cls: 'bad' });
+        ensure();
         return;
       }
       const v = op === 'findW' ? res.W : (res.S as number);
-      const name = op === 'findW' ? 'W' : 'Gap';
+      const S = res.S ?? r.line.S;
       set(op === 'findW' ? { W: +v.toFixed(4) } : { S: +v.toFixed(4) });
-      setShown({ result: res.result, line: lineOf(r, res.W, res.S ?? r.line.S) });
+      show(shownOf(r, res.result, keyFor({ ...r, line: { ...r.line, W: res.W, S } }, c), res.W, S));
       const shownV = `${toDisplay(v, unit).toFixed(unit === 'mm' ? 4 : 2)} ${u}`;
-      setMsg(v < c.fmin - 1e-9
-        ? { text: `${name} ${shownV} is below the fab minimum`, cls: 'bad' }
-        : { text: `${name} ${shownV} for ${+c.target.toFixed(2)} Ω`, cls: 'ok' });
-    });
+      setMsg({ text: `${op === 'findW' ? 'W' : 'Gap'} ${shownV} for ${+c.target.toFixed(2)} Ω`, cls: 'ok' });
+    }, ensure);
   };
 
   const round = () => {
@@ -181,7 +210,6 @@ export function Calculator() {
     ? <span className="warnicon" title="This reference has role signal, not plane" aria-label="Reference role is signal">⚠</span>
     : null;
   const searching = busy === 'searching…';
-  const layer = cu(calc.layerId);
 
   return (
     <div className="calcbody">
@@ -277,7 +305,8 @@ export function Calculator() {
         line={shown?.line ?? lineOf(req)}
         calc={calc}
         unit={unit}
-        names={{ layer: layer?.name ?? '', above: cu(calc.refAbove)?.name ?? null, below: cu(calc.refBelow)?.name ?? null }}
+        names={shown?.names ?? namesOf(req)}
+        freqGHz={shown?.freqGHz}
       />
     </div>
   );

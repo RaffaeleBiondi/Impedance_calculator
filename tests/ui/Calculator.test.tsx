@@ -5,11 +5,12 @@ import type { Job } from '../../src/solver/protocol';
 
 type Pending = { job: Job; resolve: (v: unknown) => void; reject: (e: unknown) => void; cancel: ReturnType<typeof vi.fn> };
 const runs: Pending[] = [];
+const opts = { rejectOnCancel: true };
 const fakePool = {
   run: vi.fn((job: Job) => {
     let resolve!: (v: unknown) => void, reject!: (e: unknown) => void;
     const promise = new Promise((a, b) => { resolve = a; reject = b; });
-    const p: Pending = { job, resolve, reject, cancel: vi.fn(() => reject('cancelled')) };
+    const p: Pending = { job, resolve, reject, cancel: vi.fn(() => { if (opts.rejectOnCancel) reject('cancelled'); }) };
     runs.push(p);
     return { promise, cancel: p.cancel };
   }),
@@ -24,7 +25,7 @@ import { Calculator, DEBOUNCE_MS } from '../../src/ui/Calculator';
 import { analyze } from '../../src/solver/engine';
 
 beforeAll(() => { HTMLCanvasElement.prototype.getContext = (() => null) as never; });
-beforeEach(() => { runs.length = 0; fakePool.run.mockClear(); vi.useFakeTimers(); });
+beforeEach(() => { runs.length = 0; opts.rejectOnCancel = true; fakePool.run.mockClear(); vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
 
 const mount = () => render(<StoreProvider initial={defaultAppState()}><Calculator /></StoreProvider>);
@@ -131,6 +132,71 @@ describe('Calculator', () => {
     const res = analyze({ ...(j.job as Extract<Job, { op: 'findW' }>).req, line: { type: 'se', W: 0.1352, etch: false }, q: 1 });
     await act(async () => { j.resolve({ ok: true, W: 0.1352, z: 50, result: res }); });
     expect(screen.getByLabelText('Width W')).toHaveValue('0.1352');
+  });
+
+  it('a search that fails after superseding an in-flight analysis re-analyses the current inputs', async () => {
+    mount();
+    tick(DEBOUNCE_MS + 1);
+    const first = runs[0];
+    await act(async () => { first.resolve(analyze({ ...(first.job as Extract<Job, { op: 'analyze' }>).req, q: 1 })); });
+    fireEvent.change(screen.getByLabelText('Width W'), { target: { value: '0.2' } });
+    tick(DEBOUNCE_MS + 80); // the analyze for W 0.2 is now in flight
+    const inflight = runs[runs.length - 1];
+    expect(inflight.job.op === 'analyze' && inflight.job.req.line.W).toBe(0.2);
+    fireEvent.click(screen.getByRole('button', { name: 'Find W' }));
+    const search = runs[runs.length - 1];
+    expect(search.job.op).toBe('findW');
+    expect(inflight.cancel).toHaveBeenCalled();
+    await act(async () => { search.resolve({ ok: false, reason: 'out-of-range', zRange: [20, 80], message: 'x' }); });
+    const again = runs[runs.length - 1];
+    expect(again.job.op).toBe('analyze');
+    expect(again.job.op === 'analyze' && again.job.req.line.W).toBe(0.2);
+  });
+
+  it('a search that errors also re-analyses the current inputs', async () => {
+    mount();
+    tick(DEBOUNCE_MS + 1);
+    fireEvent.change(screen.getByLabelText('Width W'), { target: { value: '0.2' } });
+    tick(DEBOUNCE_MS + 80);
+    fireEvent.click(screen.getByRole('button', { name: 'Find W' }));
+    const search = runs[runs.length - 1];
+    await act(async () => { search.reject(new Error('boom')); });
+    const again = runs[runs.length - 1];
+    expect(again.job.op === 'analyze' && again.job.req.line.W).toBe(0.2);
+    expect(screen.getByText(/Calculation failed: boom/)).toBeInTheDocument();
+  });
+
+  it('a superseded reply that resolves late is ignored', async () => {
+    opts.rejectOnCancel = false;
+    mount();
+    tick(DEBOUNCE_MS + 1);
+    const first = runs[0];
+    fireEvent.change(screen.getByLabelText('Width W'), { target: { value: '0.2' } }); // inputs change while it runs
+    const diffRes = analyze({ stackup: (first.job as Extract<Job, { op: 'analyze' }>).req.stackup, sel: { layerId: 'cu5', refAbove: 'cu4', refBelow: 'cu6' }, line: { type: 'diff', W: 0.135, S: 0.2, etch: false }, q: 1 });
+    await act(async () => { first.resolve(diffRes); });
+    expect(screen.queryByText('Zdiff')).toBeNull();
+  });
+
+  it('a late search reply for superseded inputs does not write W', async () => {
+    opts.rejectOnCancel = false;
+    mount();
+    tick(DEBOUNCE_MS + 1);
+    fireEvent.click(screen.getByRole('button', { name: 'Find W' }));
+    const search = runs[runs.length - 1];
+    fireEvent.change(screen.getByLabelText('Width W'), { target: { value: '0.3' } });
+    const res = analyze({ ...(search.job as Extract<Job, { op: 'findW' }>).req, q: 1 });
+    await act(async () => { search.resolve({ ok: true, W: 0.1352, z: 50, result: res }); });
+    expect(screen.getByLabelText('Width W')).toHaveValue('0.3');
+  });
+
+  it('a below-fab search keeps W, sends fmin and shows the reachable range in the display unit', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Find W' }));
+    const search = runs[runs.length - 1];
+    expect(search.job.op === 'findW' && search.job.fmin).toBe(0.125);
+    await act(async () => { search.resolve({ ok: false, reason: 'below-fab', zRange: [31.2, 48.4], message: 'raw ohm mm text' }); });
+    expect(screen.getByLabelText('Width W')).toHaveValue('0.135');
+    expect(screen.getByText(/needs W below the fab minimum 0\.125 mm; W ≥ 0\.125 mm gives 31\.2 to 48\.4 Ω/)).toBeInTheDocument();
   });
 
   it('L1 can be cleared back to none', () => {

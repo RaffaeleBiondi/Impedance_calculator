@@ -86,8 +86,25 @@ describe('Results', () => {
     expect(screen.getByText(/W < 0\.150/)).toBeInTheDocument();
   });
 
-  it('shows the topology label', () => {
+  it('shows the topology label once (the diagram title)', () => {
     show(seRes, calc());
-    expect(screen.getAllByText('Asymmetric stripline').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Asymmetric stripline').length).toBe(1);
+  });
+
+  it('collapses the open sides in the geometry line and keeps the full line in a closed details', () => {
+    const { container } = show(oddRes, calc({ type: 'diff', W: 0.125, S: 0.3, target: 100, refAbove: null, refBelow: null }));
+    const geo = container.querySelector('p.geo') as HTMLElement;
+    expect(geo.textContent).toMatch(/layers to surface/);
+    expect((geo.textContent!.match(/cut out/g) ?? []).length).toBeLessThanOrEqual(2);
+    const full = screen.getByText('Full stack').closest('details') as HTMLDetailsElement;
+    expect(full.open).toBe(false);
+    expect(full.textContent).toMatch(/In1\.Cu \(cut out\)/);
+  });
+
+  it('labels the loss with the frequency it was solved at', () => {
+    show(seRes, calc({ freqGHz: 5 }));
+    expect(screen.getByText('Loss @ 5 GHz')).toBeInTheDocument();
+    const { container } = render(<Results result={seRes} line={{ W: 0.135 }} calc={calc({ freqGHz: 5 })} unit="mm" names={names} freqGHz={1} />);
+    expect(container.textContent).toContain('Loss @ 1 GHz');
   });
 });

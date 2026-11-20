@@ -43,4 +43,12 @@ describe('CrossSectionDiagram', () => {
     expect(screen.getByText('Embedded microstrip')).toBeInTheDocument();
     expect(screen.getByText(/open/i)).toBeInTheDocument();
   });
+
+  it('summarises the open sides of a no-reference pair in one band each', () => {
+    const { container } = render(<CrossSectionDiagram xs={xsOf('cu5', null, null)} line={{ W: 0.125, S: 0.3 }} names={{ above: null, below: null }} unit="mm" />);
+    expect(screen.getAllByText(/layers to surface/).length).toBe(2);
+    expect(screen.getAllByText(/cut out/).length).toBeLessThanOrEqual(2);
+    const h = Number(container.querySelector('svg')!.getAttribute('viewBox')!.split(' ')[3]);
+    expect(h).toBeLessThan(400);
+  });
 });
