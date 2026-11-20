@@ -16,7 +16,7 @@ const readSaved = (): Saved => {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Saved) : {};
 };
 
-export function StackupEditor() {
+export function StackupEditor({ onImportKicad }: { onImportKicad?: () => void } = {}) {
   const { state, dispatch } = useStore();
   const { stackup, unit, calc } = state;
   const [msg, setMsg] = useState<string | null>(null);
@@ -152,6 +152,7 @@ export function StackupEditor() {
         <button type="button" onClick={() => file.current?.click()}>Import JSON</button>
         <input ref={file} type="file" accept="application/json,.json" hidden
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void importJson(f); e.target.value = ''; }} />
+        {onImportKicad && <button type="button" onClick={onImportKicad}>Import KiCad&hellip;</button>}
         <button type="button" onClick={exportJson}>Export JSON</button>
         <button type="button" onClick={() => void share()}>Share link</button>
         <button type="button" onClick={() => { if (window.confirm('Replace the current stackup with the example?')) dispatch({ type: 'resetExample' }); }}>Reset to example</button>

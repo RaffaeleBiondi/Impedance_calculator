@@ -1,17 +1,25 @@
+import { useState } from 'react';
 import { StoreProvider, useStore } from '../state/store';
 import { StackupEditor } from './StackupEditor';
 import { CalculatorSlot } from './slots/CalculatorSlot';
 import { ToolsSlot } from './slots/ToolsSlot';
 import { AssumptionsSlot } from './slots/AssumptionsSlot';
+import { ImportDialog } from './ImportDialog';
+import { ThemeToggle } from './ThemeToggle';
 import './theme.css';
 
 function Shell() {
   const { notice, dispatch } = useStore();
+  const [importing, setImporting] = useState(false);
   return (
     <div className="app">
       <header className="top">
-        <h1>LordOfTheOhms</h1>
-        <p>PCB trace impedance calculator. Runs entirely in your browser.</p>
+        <div className="titles">
+          <h1>LordOfTheOhms</h1>
+          <p>PCB trace impedance calculator. Runs entirely in your browser.</p>
+        </div>
+        <button type="button" onClick={() => setImporting(true)}>Import KiCad&hellip;</button>
+        <ThemeToggle />
       </header>
       {notice && (
         <div className="notice" role="status">
@@ -20,11 +28,12 @@ function Shell() {
         </div>
       )}
       <main className="cols">
-        <StackupEditor />
+        <StackupEditor onImportKicad={() => setImporting(true)} />
         <CalculatorSlot />
       </main>
       <ToolsSlot />
       <AssumptionsSlot />
+      {importing && <ImportDialog onClose={() => setImporting(false)} />}
     </div>
   );
 }
