@@ -17,7 +17,8 @@ export interface Material {
  * Deliberately NOT shipped: the Isola 370HR glass-style entries carried over
  * from the original page (core 1x7628 4.35/0.017, prepreg 1080 3.93/0.020,
  * prepreg 2116 4.17/0.019). The current Isola Dk/Df table (370HR, Rev I)
- * lists different numbers for those constructions, so they cannot be verified.
+ * lists different numbers for those constructions, so they cannot be verified;
+ * the verified table rows are shipped instead, named by construction.
  */
 export const PRESETS: Material[] = [
   {
@@ -43,6 +44,45 @@ export const PRESETS: Material[] = [
       'Isola 370HR Laminate and Prepreg data sheet, Rev C (15 Apr 2021), "Typical Values Table", ' +
       'Dk B. @ 1 GHz = 4.17 and Df B. @ 1 GHz = 0.0161 (IPC-TM-650 2.5.5.9). ' +
       'Single typical value, not per glass style or resin content.',
+    preset: true,
+  },
+  {
+    id: 'isola-370hr-core-1x7628-46',
+    name: 'Isola 370HR core 1×7628 (46% resin, 0.203 mm)',
+    family: 'Isola 370HR',
+    type: 'core',
+    er: 4.28,
+    tand: 0.018,
+    freq: '1 GHz',
+    source:
+      'Isola 370HR "Dielectric Constant (Dk) / Dissipation Factor (Df) Table", Revision I (24 Feb 2026), "Core Data", row 1x7628, 46.00% resin, Standard, 0.0080 in / 0.203 mm, ' +
+      '1 GHz column: Dk 4.28, Df 0.0180.',
+    preset: true,
+  },
+  {
+    id: 'isola-370hr-prepreg-1080-61',
+    name: 'Isola 370HR prepreg 1080 (61% resin)',
+    family: 'Isola 370HR',
+    type: 'prepreg',
+    er: 3.92,
+    tand: 0.02,
+    freq: '1 GHz',
+    source:
+      'Isola 370HR "Dielectric Constant (Dk) / Dissipation Factor (Df) Table", Revision I (24 Feb 2026), "Prepreg Data", row 1080, 61.00% resin, Alternate, 0.0028 in / 0.070 mm, ' +
+      '1 GHz column: Dk 3.92, Df 0.0200.',
+    preset: true,
+  },
+  {
+    id: 'isola-370hr-prepreg-2116-56',
+    name: 'Isola 370HR prepreg 2116 (56% resin)',
+    family: 'Isola 370HR',
+    type: 'prepreg',
+    er: 4.08,
+    tand: 0.02,
+    freq: '1 GHz',
+    source:
+      'Isola 370HR "Dielectric Constant (Dk) / Dissipation Factor (Df) Table", Revision I (24 Feb 2026), "Prepreg Data", row 2116, 56.00% resin, Standard, 0.0051 in / 0.130 mm, ' +
+      '1 GHz column: Dk 4.08, Df 0.0200.',
     preset: true,
   },
   {
