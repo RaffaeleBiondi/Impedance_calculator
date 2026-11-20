@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import App from '../../src/ui/App';
+import rows from '../../src/validation.json';
 
 const fx = readFileSync('tests/fixtures/kicad7-4layer.kicad_pcb', 'utf8').replace('(1 "In1.Cu" power)', '(1 "In1.Cu" signal)');
 const role = (name: string) => (screen.getByLabelText(`Role of ${name}`) as HTMLSelectElement).value;
@@ -71,9 +72,12 @@ describe('theme toggle', () => {
 });
 
 describe('assumptions', () => {
-  it('renders notes and the empty validation state', () => {
+  it('renders notes and the generated validation table (src/validation.json)', () => {
     render(<App />);
-    expect(screen.getByText('Validation results will appear here.')).toBeInTheDocument();
+    expect(screen.queryByText('Validation results will appear here.')).toBeNull();
+    const table = screen.getByRole('table', { name: 'Validation results' });
+    expect(table.querySelectorAll('tbody tr').length).toBe(rows.length);
+    for (const s of ['Pass', 'Deviation recorded', 'Not validated']) expect(screen.getAllByText(s).length).toBeGreaterThan(0);
     expect(screen.getByText(/Solver method/)).toBeInTheDocument();
   });
 });

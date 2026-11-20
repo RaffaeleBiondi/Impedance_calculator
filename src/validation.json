@@ -1,1 +1,178 @@
-[]
+[
+  {
+    "id": "V0",
+    "test": "Port golden: TS solver core vs the original JS (legacy problem descriptors)",
+    "reference": "original solver (tests/legacy)",
+    "result": "max relative difference 0.0e+0 (7 cases, q 1)",
+    "acceptance": "≤ 1e-9 relative",
+    "status": "pass"
+  },
+  {
+    "id": "V1",
+    "test": "Regression, example stackup, q 2 (five width-table cases)",
+    "reference": "original page; re-baselined masked cases",
+    "result": "unmasked 50.031 / 100.786 Ω (unchanged); masked 50.36 → 50.311, 100.78 → 100.724, 90.18 → 90.131 Ω",
+    "acceptance": "unmasked ±0.02 Ω of the original; masked ±0.02 Ω of the new golden",
+    "status": "pass"
+  },
+  {
+    "id": "V1c",
+    "test": "V1 masked cases converged: rich(2,4) vs rich(4,8)",
+    "reference": "self (mesh convergence)",
+    "result": "−0.0026 % … −0.0023 %",
+    "acceptance": "≤ 0.02 %",
+    "status": "pass"
+  },
+  {
+    "id": "V2",
+    "test": "Legacy equivalence: generalised builder vs legacy builder, unmasked legacy topologies",
+    "reference": "legacy buildProblem",
+    "result": "max relative difference 0.0e+0 (6 cases, q 1)",
+    "acceptance": "identical grid; ≤ 1e-9 relative",
+    "status": "pass"
+  },
+  {
+    "id": "V3",
+    "test": "Coupled stripline: T 0, b 0.4, εr 4, W 0.15 / S 0.25, q 4",
+    "reference": "Cohn (exact conformal map)",
+    "result": "Zodd −0.051 %, Zeven −0.057 %",
+    "acceptance": "≤ 0.1 %",
+    "status": "pass"
+  },
+  {
+    "id": "V4",
+    "test": "Single stripline: T 0, b 0.4, εr 4, W 0.1 / 0.2 / 0.4, q 2",
+    "reference": "Cohn (exact conformal map)",
+    "result": "−0.023 % … −0.009 %",
+    "acceptance": "≤ 0.15 %",
+    "status": "pass"
+  },
+  {
+    "id": "V5",
+    "test": "Microstrip: T 0, no mask, H 0.12, εr 3.9, W/H 0.5 / 1 / 2, q 4, dom 1 and 2",
+    "reference": "Hammerstad-Jensen (εeff ~0.2 %)",
+    "result": "−0.073 % … −0.025 %",
+    "acceptance": "≤ 0.2 %",
+    "status": "pass"
+  },
+  {
+    "id": "V6",
+    "test": "Coupled microstrip: T 0, no mask, H 0.12, εr 3.9, W/H and S/H 0.5 / 1 / 2, q 2",
+    "reference": "Kirschning-Jansen (static Z < 0.6 %)",
+    "result": "Zeven, Zodd −0.341 % … +0.307 % (εeff −0.285 % … +0.367 %)",
+    "acceptance": "≤ 0.6 % (KJ stated accuracy)",
+    "status": "pass"
+  },
+  {
+    "id": "V7",
+    "test": "Mesh convergence rich(1,2) vs rich(2,4): six legacy cases plus every new topology (15 cases)",
+    "reference": "self",
+    "result": "−0.006 % … +0.012 %; masked outer SE +0.008 % (legacy grid −0.265 %)",
+    "acceptance": "≤ 0.3 %; masked case ~0.01 %",
+    "status": "pass"
+  },
+  {
+    "id": "V8",
+    "test": "Homogeneous cross-sections give εeff = εr (5 topologies)",
+    "reference": "exact",
+    "result": "max relative error 0.0e+0",
+    "acceptance": "≤ 1e-4 relative",
+    "status": "pass"
+  },
+  {
+    "id": "V9a",
+    "test": "Asymmetric stripline, symmetric limit H1 = H2: T 0, homogeneous, q 2",
+    "reference": "Cohn (exact)",
+    "result": "−0.031 % … −0.007 %",
+    "acceptance": "≤ 0.15 %",
+    "status": "pass"
+  },
+  {
+    "id": "V9b",
+    "test": "Asymmetric stripline H1 ≠ H2: T 0, homogeneous, q 2 (3 cases)",
+    "reference": "offset-stripline formula (Wadell Z0,air combination; no accuracy published)",
+    "result": "solver vs formula −3.50 % … −1.19 %; solver vs independent FD +0.04 % … +0.05 %",
+    "acceptance": "formula: none stated, deviation recorded (band ≤ 4 %); FD second reference ≤ 0.5 %",
+    "status": "deviation-recorded"
+  },
+  {
+    "id": "V10a",
+    "test": "Embedded microstrip, limit: cover 1e-6 mm vs plain microstrip (T 0, H 0.1, εr 4.4, q 2)",
+    "reference": "limit (cover → 0 equals microstrip)",
+    "result": "−0.0007 % … −0.0005 %",
+    "acceptance": "≤ 0.1 %",
+    "status": "pass"
+  },
+  {
+    "id": "V10b",
+    "test": "Embedded microstrip Z0, cover 0.025–0.2 mm (W 0.2, H 0.1, εr 4.4, T 0, q 2)",
+    "reference": "Wadell / IPC-2141A embedded approximation (secondary source: \"estimated ±3 %\")",
+    "result": "solver vs formula +1.10 % … +2.50 %; solver vs independent FD +0.19 % … +0.21 %",
+    "acceptance": "±3 %",
+    "status": "pass"
+  },
+  {
+    "id": "V10c",
+    "test": "Embedded microstrip εeff, cover 0.025–0.2 mm (same cases)",
+    "reference": "Wadell / IPC-2141A embedded approximation (no εeff accuracy stated)",
+    "result": "solver vs formula −4.92 % … −2.28 %; solver vs independent FD +0.18 % … +0.19 %",
+    "acceptance": "formula: none stated, deviation recorded (band ≤ 6 %); FD second reference ≤ 0.5 %",
+    "status": "deviation-recorded"
+  },
+  {
+    "id": "V11",
+    "test": "CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2",
+    "reference": "exact conformal map (infinitely thick substrate)",
+    "result": "Z0 dom 1 +0.053 %, dom 2 +0.164 %; εeff dom 1 +0.140 %, dom 2 +0.608 %",
+    "acceptance": "Z0 ≤ 0.3 %; dom 1 vs 2 recorded",
+    "status": "pass"
+  },
+  {
+    "id": "V12a",
+    "test": "CPW on a finite substrate (no backside metal): T 0, q 2 (4 cases, h 0.1–0.5 mm)",
+    "reference": "Ghione / Veyres–Fouad Hanna partial capacitance (Qucs, Simons; no accuracy stated)",
+    "result": "solver vs formula: Z0 −1.77 % … −0.21 %, εeff +0.36 % … +3.29 %; solver vs independent FD −0.03 % … +0.04 % (Z0, h ≤ 0.2 mm cases)",
+    "acceptance": "~1 % (recorded); beyond it, FD second reference ≤ 0.5 %",
+    "status": "deviation-recorded"
+  },
+  {
+    "id": "V12b",
+    "test": "CPWG (conductor-backed CPW): T 0, q 2 (4 cases, h 0.1–0.5 mm)",
+    "reference": "Ghione-Naldi partial capacitance (Qucs, Simons; no accuracy stated)",
+    "result": "solver vs formula: Z0 −1.76 % … −0.03 %, εeff −1.25 % … −0.01 %; solver vs independent FD +0.02 % … +0.06 % (Z0, h ≤ 0.2 mm cases)",
+    "acceptance": "~1 % (recorded); beyond it, FD second reference ≤ 0.5 %",
+    "status": "deviation-recorded"
+  },
+  {
+    "id": "V13",
+    "test": "Trapezoid: limits, slices, observed mesh order (3 cases)",
+    "reference": "limits and convergence",
+    "result": "W_top = W equals the rectangle; Z between rect(W) and rect(W_top); 8 vs 16 slices −0.024 % … +0.020 %; observed order 1.34–1.38 (TRAP_ORDER 1.35)",
+    "acceptance": "≤ 1e-9; between; ≤ 0.1 %; order recorded",
+    "status": "pass"
+  },
+  {
+    "id": "V14",
+    "test": "Dielectric loss",
+    "reference": "exact homogeneous stripline; microstrip self-consistency identity",
+    "result": "pending (Task 7)",
+    "acceptance": "≤ 0.1 % / ≤ 0.5 %",
+    "status": "not-validated"
+  },
+  {
+    "id": "V15",
+    "test": "Solder mask (microstrip T 0.035, H 0.12, εr 3.9, W 0.22, q 2): t 0–20 µm, εr 3–4",
+    "reference": "none exists: sensitivity only",
+    "result": "t = 0 reproduces no mask exactly; Z decreases monotonically in t and εr (down to −4.78 % at 20 µm, εr 4)",
+    "acceptance": "recorded; not validated against a reference",
+    "status": "not-validated"
+  },
+  {
+    "id": "V16",
+    "test": "Model and IO: stackup validation, reference defaults, orientation, slabs, etch, units, JSON, URL hash, KiCad import, CSV",
+    "reference": "— (unit tests, tests/model and tests/io)",
+    "result": "96 / 96 tests pass (9 files)",
+    "acceptance": "unit tests",
+    "status": "pass"
+  }
+]

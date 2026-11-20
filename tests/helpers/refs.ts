@@ -163,9 +163,14 @@ export function offsetStripline(W: number, H1: number, H2: number, er: number): 
  */
 export function embeddedMicrostrip(W: number, H: number, Hcover: number, er: number):
   { z0: number; eeff: number } {
-  const s = hjMicrostrip(W / H, er);
-  const eeff = er - (er - s.eeff) * Math.exp(-2 * Hcover / H);
-  return { z0: s.z0 * Math.sqrt(s.eeff / eeff), eeff };
+  return embedFromSurface(hjMicrostrip(W / H, er), H, Hcover, er);
+}
+
+/** The two embedded-microstrip equations above, applied to given surface-microstrip values. */
+export function embedFromSurface(surf: { z0: number; eeff: number }, H: number, Hcover: number, er: number):
+  { z0: number; eeff: number } {
+  const eeff = er - (er - surf.eeff) * Math.exp(-2 * Hcover / H);
+  return { z0: surf.z0 * Math.sqrt(surf.eeff / eeff), eeff };
 }
 
 /**

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cohnStrip, hjMicrostrip, cpwInfinite,
-  kjCoupledMicrostrip, offsetStripline, embeddedMicrostrip, cpwFinite, cpwg,
+  kjCoupledMicrostrip, offsetStripline, embeddedMicrostrip, embedFromSurface, cpwFinite, cpwg,
 } from './refs';
 
 const rel = (a: number, b: number): number => Math.abs(a - b) / b;
@@ -35,6 +35,15 @@ describe('kjCoupledMicrostrip', () => {
     const tight = kjCoupledMicrostrip(1, 0.2, 1, 4.5);
     const loose = kjCoupledMicrostrip(1, 2, 1, 4.5);
     expect(tight.zoe - tight.zoo).toBeGreaterThan(loose.zoe - loose.zoo);
+  });
+  it('regression pin: W 1, S 0.5, H 1, er 4.4', () => {
+    // Pinned values; the Task 6a review checked them against qucs-core (mscoupled.cpp, Kirschning
+    // static branch) and an independent FD solve.
+    const r = kjCoupledMicrostrip(1, 0.5, 1, 4.4);
+    expect(r.zoe).toBeCloseTo(86.597, 3);
+    expect(r.zoo).toBeCloseTo(53.092, 3);
+    expect(r.eeffEven).toBeCloseTo(3.3824, 3);
+    expect(r.eeffOdd).toBeCloseTo(2.8280, 3);
   });
   it('air substrate: both effective permittivities are 1', () => {
     const r = kjCoupledMicrostrip(1, 0.5, 1, 1);
@@ -102,11 +111,17 @@ describe('embeddedMicrostrip', () => {
   });
   it('arithmetic check vs independently published implementation values (pcb-toolkit test): ' +
      'surface Z0 44.832 ohm, eeff 3.3075, cover 1, H 5, er 4.6 -> 42.196 ohm, eeff 3.7336', () => {
-    // Re-applies the formula to the surface values quoted in that test; it checks our
-    // transcription of the two embedded equations, not the physics.
-    const eeff = 4.6 - (4.6 - 3.3075) * Math.exp(-2 * 1 / 5);
-    expect(eeff).toBeCloseTo(3.7336, 3);
-    expect(44.832 * Math.sqrt(3.3075 / eeff)).toBeCloseTo(42.196, 2);
+    // Applies our embedded equations (the helper embeddedMicrostrip uses) to the surface values
+    // quoted in that test; it checks our transcription of the two equations, not the physics.
+    const e = embedFromSurface({ z0: 44.832, eeff: 3.3075 }, 5, 1, 4.6);
+    expect(e.eeff).toBeCloseTo(3.7336, 3);
+    expect(e.z0).toBeCloseTo(42.196, 2);
+  });
+  it('embeddedMicrostrip is embedFromSurface applied to hjMicrostrip', () => {
+    const e = embeddedMicrostrip(0.2, 0.1, 0.05, 4.4);
+    const f = embedFromSurface(hjMicrostrip(2, 4.4), 0.1, 0.05, 4.4);
+    expect(e.z0).toBe(f.z0);
+    expect(e.eeff).toBe(f.eeff);
   });
 });
 
@@ -121,13 +136,14 @@ describe('cpwFinite', () => {
     }
   });
   it('thinner substrate lowers eeff and raises Z0; eeff stays within [1, (er+1)/2]', () => {
-    let prevE = Infinity;
+    let prevE = Infinity, prevZ = 0;
     for (const h of [10, 2, 0.5, 0.1]) {
       const f = cpwFinite(0.2, 0.1, h, 4.2);
       expect(f.eeff).toBeGreaterThan(1);
       expect(f.eeff).toBeLessThanOrEqual(5.2 / 2 + 1e-9);
       expect(f.eeff).toBeLessThan(prevE);
-      prevE = f.eeff;
+      expect(f.z0).toBeGreaterThan(prevZ);
+      prevE = f.eeff; prevZ = f.z0;
     }
   });
   it('air substrate: eeff = 1', () => {
