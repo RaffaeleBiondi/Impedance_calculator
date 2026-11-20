@@ -1,5 +1,6 @@
 import type { GapRule } from '../model/gapRule';
 import { analyze, type AnalyzeRequest } from './engine';
+import { compactWithinTol, findS, findW, tableCell } from './synthesis';
 
 export type Job =
   | { op: 'analyze'; req: AnalyzeRequest }
@@ -21,6 +22,14 @@ export function handleJob(job: Job): unknown {
       const line = job.param === 'W' ? { ...job.req.line, W: job.value } : { ...job.req.line, S: job.value };
       return analyze({ ...job.req, line });
     }
+    case 'findW':
+      return findW(job.req, job.target);
+    case 'findS':
+      return findS(job.req, job.target);
+    case 'compact':
+      return compactWithinTol(job.req, { target: job.target, tol: job.tol, fmin: job.fmin });
+    case 'tableCell':
+      return tableCell(job.req, job.target, job.rule, job.fmin, job.tol);
     default:
       throw new Error(`unsupported op: ${(job as Job).op}`);
   }
