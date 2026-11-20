@@ -1,3 +1,1 @@
-export default function App() {
-  return <h1>LordOfTheOhms</h1>;
-}
+export { default } from './ui/App';
