@@ -1,0 +1,72 @@
+name: Bug report
+description: Report a wrong result, a crash, or something that does not work as described.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Wrong impedance values are the most useful reports we can get, so please include enough detail for us to reproduce the calculation.
+
+        Do not paste anything confidential: share links and stackup JSON contain your full stackup.
+  - type: textarea
+    id: computed
+    attributes:
+      label: What did you compute?
+      description: Signal layer, geometry (microstrip, stripline, CPW, differential pair...), W, gap, target impedance, etch profile, mesh setting.
+      placeholder: e.g. Differential pair on an inner layer, W 0.125 mm, gap 0.2 mm, rectangular etch, fine mesh.
+    validations:
+      required: true
+  - type: textarea
+    id: state
+    attributes:
+      label: Share link or stackup JSON
+      description: Paste the share link, or the exported stackup JSON. This lets us reproduce your exact set-up.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: values
+    attributes:
+      label: Expected vs obtained impedance
+      description: The value you expected and the value LordOfTheOhms gave, with units.
+      placeholder: |
+        Expected: 100 ohm differential
+        Obtained: 92.4 ohm differential
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source of the expected value
+      description: Where does the expected value come from?
+      options:
+        - Fab impedance report
+        - Another field solver
+        - Closed-form formula
+        - Measurement (TDR or VNA)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: source-details
+    attributes:
+      label: Source details
+      description: Name of the other solver or formula, measurement set-up, or anything else that helps us compare.
+    validations:
+      required: false
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Browser name and version, and operating system.
+      placeholder: e.g. Firefox 140 on Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: other
+    attributes:
+      label: Anything else?
+      description: Screenshots, console errors, or other context.
+    validations:
+      required: false
