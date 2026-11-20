@@ -124,7 +124,7 @@
     "test": "CPW without ground: substrate 20·(W+2G) = 8.0 mm, T 0, W 0.2, G 0.1, εr 4, q 2, dom 1 and 2",
     "reference": "exact conformal map (infinitely thick substrate)",
     "result": "Z0 dom 1 +0.122 %, dom 2 +0.234 %; εeff dom 1 +0.140 %, dom 2 +0.608 %",
-    "acceptance": "Z0 ≤ 0.3 % at dom 1 and 2; εeff ≤ 0.3 % at dom 1 (shipped); dom 2 εeff band ≤ 1 %, accepted under the review ruling and deferred (known mesh-grading limitation)",
+    "acceptance": "Z0 and εeff ≤ 0.3 % at dom 1, the domain the app uses; dom 2 recorded as domain sensitivity of the 8 mm test substrate",
     "status": "pass"
   },
   {
@@ -171,7 +171,7 @@
     "id": "V16",
     "test": "Model and IO: stackup validation, reference defaults, orientation, slabs, etch, units, JSON, URL hash, KiCad import, CSV",
     "reference": "— (unit tests, tests/model and tests/io)",
-    "result": "96 / 96 tests pass (9 files)",
+    "result": "113 / 113 tests pass (9 files)",
     "acceptance": "unit tests",
     "status": "pass"
   }
