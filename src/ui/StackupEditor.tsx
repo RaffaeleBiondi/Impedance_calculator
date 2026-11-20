@@ -68,7 +68,7 @@ export function StackupEditor() {
 
       <div className="row">
         <label className="grow">Name
-          <input value={stackup.name} onChange={(e) => dispatch({ type: 'setStackup', stackup: { ...stackup, name: e.target.value } })} />
+          <input value={stackup.name} onChange={(e) => dispatch({ type: 'renameStackup', name: e.target.value })} />
         </label>
         <label>Unit
           <select value={unit} onChange={(e) => dispatch({ type: 'setUnit', unit: e.target.value as Unit })} aria-label="Display unit">
@@ -159,61 +159,6 @@ export function StackupEditor() {
       {msg && <p className="hint" role="status">{msg}</p>}
     </section>
   );
-
-  function CopperRow({ l, unit, selected }: { l: CopperLayer; unit: Unit; selected: boolean }) {
-    return (
-      <>
-        <td>
-          <input className="name" aria-label={`Name of ${l.id}`} value={l.name}
-            onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { name: e.target.value } })} />
-          <button type="button" className={`pill${selected ? ' on' : ''}`} onClick={() => dispatch({ type: 'selectLayer', id: l.id })}
-            aria-pressed={selected} title="Calculate on this layer">{selected ? 'selected' : 'select'}</button>
-        </td>
-        <td>
-          <select aria-label={`Role of ${l.id}`} value={l.role} onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { role: e.target.value as Role } })}>
-            <option value="signal">signal</option><option value="plane">plane</option><option value="mixed">mixed</option>
-          </select>
-        </td>
-        <td><LenInput valueMm={l.t} unit={unit} aria-label={`Thickness of ${l.id}`} onChangeMm={(t) => dispatch({ type: 'updateLayer', id: l.id, patch: { t } })} /></td>
-        <td colSpan={3} className="cuopts">
-          <label className="inl">Etched on
-            <select aria-label={`Base of ${l.id}`} value={l.base ?? 'auto'} onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { base: e.target.value as 'auto' | 'above' | 'below' } })}>
-              <option value="auto">auto</option><option value="above">dielectric above</option><option value="below">dielectric below</option>
-            </select>
-          </label>
-          <label className="inl">
-            <input type="checkbox" checked={!!l.etchOverride}
-              onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { etchOverride: e.target.checked ? { ...stackup.etch.rule } : undefined } })} />
-            own etch rule
-          </label>
-          {l.etchOverride && <RuleEditor rule={l.etchOverride} label={`Etch rule of ${l.id}`} onChange={(etchOverride) => dispatch({ type: 'updateLayer', id: l.id, patch: { etchOverride } })} />}
-        </td>
-      </>
-    );
-  }
-
-  function DielectricRow({ l, unit }: { l: DielectricLayer; unit: Unit }) {
-    return (
-      <>
-        <td>
-          <input className="name" aria-label={`Name of ${l.id}`} value={l.material}
-            onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { material: e.target.value, materialId: undefined } })} />
-        </td>
-        <td>
-          <select aria-label={`Type of ${l.id}`} value={l.type} onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { type: e.target.value as 'core' | 'prepreg' } })}>
-            <option value="core">core</option><option value="prepreg">prepreg</option>
-          </select>
-        </td>
-        <td><LenInput valueMm={l.t} unit={unit} aria-label={`Thickness of ${l.id}`} onChangeMm={(t) => dispatch({ type: 'updateLayer', id: l.id, patch: { t } })} /></td>
-        <td>
-          <MaterialPicker type={l.type} materialId={l.materialId} label={l.id}
-            onPick={(m) => dispatch({ type: 'updateLayer', id: l.id, patch: { materialId: m.id, er: m.er, tand: m.tand } })} />
-        </td>
-        <td><NumInput value={l.er} aria-label={`er of ${l.id}`} onChange={(er) => dispatch({ type: 'updateLayer', id: l.id, patch: { er } })} /></td>
-        <td><NumInput value={l.tand} aria-label={`tand of ${l.id}`} onChange={(tand) => dispatch({ type: 'updateLayer', id: l.id, patch: { tand } })} /></td>
-      </>
-    );
-  }
 }
 
 function RuleEditor({ rule, onChange, label }: { rule: EtchRule; onChange: (r: EtchRule) => void; label: string }) {
@@ -224,5 +169,63 @@ function RuleEditor({ rule, onChange, label }: { rule: EtchRule; onChange: (r: E
       </select>
       <NumInput value={rule.value} aria-label={`${label} value`} onChange={(value) => onChange({ ...rule, value })} />
     </span>
+  );
+}
+
+function CopperRow({ l, unit, selected }: { l: CopperLayer; unit: Unit; selected: boolean }) {
+  const { state, dispatch } = useStore();
+  const stackup = state.stackup;
+  return (
+    <>
+      <td>
+        <input className="name" aria-label={`Name of ${l.id}`} value={l.name}
+          onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { name: e.target.value } })} />
+        <button type="button" className={`pill${selected ? ' on' : ''}`} onClick={() => dispatch({ type: 'selectLayer', id: l.id })}
+          aria-pressed={selected} title="Calculate on this layer">{selected ? 'selected' : 'select'}</button>
+      </td>
+      <td>
+        <select aria-label={`Role of ${l.id}`} value={l.role} onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { role: e.target.value as Role } })}>
+          <option value="signal">signal</option><option value="plane">plane</option><option value="mixed">mixed</option>
+        </select>
+      </td>
+      <td><LenInput valueMm={l.t} unit={unit} aria-label={`Thickness of ${l.id}`} onChangeMm={(t) => dispatch({ type: 'updateLayer', id: l.id, patch: { t } })} /></td>
+      <td colSpan={3} className="cuopts">
+        <label className="inl">Etched on
+          <select aria-label={`Base of ${l.id}`} value={l.base ?? 'auto'} onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { base: e.target.value as 'auto' | 'above' | 'below' } })}>
+            <option value="auto">auto</option><option value="above">dielectric above</option><option value="below">dielectric below</option>
+          </select>
+        </label>
+        <label className="inl">
+          <input type="checkbox" checked={!!l.etchOverride}
+            onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { etchOverride: e.target.checked ? { ...stackup.etch.rule } : undefined } })} />
+          own etch rule
+        </label>
+        {l.etchOverride && <RuleEditor rule={l.etchOverride} label={`Etch rule of ${l.id}`} onChange={(etchOverride) => dispatch({ type: 'updateLayer', id: l.id, patch: { etchOverride } })} />}
+      </td>
+    </>
+  );
+}
+
+function DielectricRow({ l, unit }: { l: DielectricLayer; unit: Unit }) {
+  const { dispatch } = useStore();
+  return (
+    <>
+      <td>
+        <input className="name" aria-label={`Name of ${l.id}`} value={l.material}
+          onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { material: e.target.value, materialId: undefined } })} />
+      </td>
+      <td>
+        <select aria-label={`Type of ${l.id}`} value={l.type} onChange={(e) => dispatch({ type: 'updateLayer', id: l.id, patch: { type: e.target.value as 'core' | 'prepreg' } })}>
+          <option value="core">core</option><option value="prepreg">prepreg</option>
+        </select>
+      </td>
+      <td><LenInput valueMm={l.t} unit={unit} aria-label={`Thickness of ${l.id}`} onChangeMm={(t) => dispatch({ type: 'updateLayer', id: l.id, patch: { t } })} /></td>
+      <td>
+        <MaterialPicker type={l.type} materialId={l.materialId} label={l.id}
+          onPick={(m) => dispatch({ type: 'updateLayer', id: l.id, patch: { materialId: m.id, er: m.er, tand: m.tand } })} />
+      </td>
+      <td><NumInput value={l.er} aria-label={`er of ${l.id}`} onChange={(er) => dispatch({ type: 'updateLayer', id: l.id, patch: { er } })} /></td>
+      <td><NumInput value={l.tand} aria-label={`tand of ${l.id}`} onChange={(tand) => dispatch({ type: 'updateLayer', id: l.id, patch: { tand } })} /></td>
+    </>
   );
 }

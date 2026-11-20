@@ -76,3 +76,14 @@ describe('reducer', () => {
     expect(x.notice).toBeTruthy();
   });
 });
+
+describe('renameStackup', () => {
+  it('changes only the name and keeps tableLayers', () => {
+    const s = base();
+    s.tableLayers = ['cu2'];
+    const r = reducer(s, { type: 'renameStackup', name: 'My board' }).state;
+    expect(r.stackup.name).toBe('My board');
+    expect(r.tableLayers).toEqual(['cu2']);
+    expect(r.stackup.layers).toBe(s.stackup.layers);
+  });
+});

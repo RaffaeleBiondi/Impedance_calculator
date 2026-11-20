@@ -9,6 +9,7 @@ type Layer = CopperLayer | DielectricLayer;
 export type Action =
   | { type: 'setUnit'; unit: Unit }
   | { type: 'setStackup'; stackup: Stackup }
+  | { type: 'renameStackup'; name: string }
   | { type: 'addLayer'; after: string; kind: 'copper' | 'dielectric' }
   | { type: 'removeLayer'; id: string }
   | { type: 'moveLayer'; id: string; dir: 'up' | 'down' }
@@ -54,6 +55,9 @@ export function reducer(state: AppState, a: Action): Result {
   switch (a.type) {
     case 'setUnit':
       return { state: { ...state, unit: a.unit } };
+
+    case 'renameStackup':
+      return { state: withStackup(state, { ...state.stackup, name: a.name }) };
 
     case 'setStackup': {
       let next: AppState = { ...state, stackup: a.stackup, tableLayers: tableDefault(a.stackup) };
