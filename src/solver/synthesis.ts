@@ -152,19 +152,36 @@ export function compactAtTarget(req: AnalyzeRequest, target: number, fmin: numbe
   };
 }
 
-/** Below-fab failure for a W search: reports the Z range reachable with W >= fmin (f falls with W). */
+/**
+ * Below-fab failure: reports the Z range reachable with the searched dimension >= fmin, up to hi.
+ * Z falls with W and rises with the gap; the range is ordered either way.
+ */
 function belowFab(
-  f: (W: number) => number, target: number, W: number, fmin: number, hiW: number, req: AnalyzeRequest,
+  f: (x: number) => number, target: number, x: number, fmin: number, hi: number, req: AnalyzeRequest, name: 'W' | 'gap' = 'W',
 ): SynthResult {
   try {
-    const zHi = f(fmin);
-    const zLo = f(hiW);
-    if (!Number.isFinite(zHi) || !Number.isFinite(zLo)) return { ok: false, reason: 'error', message: 'Could not evaluate the reachable range' };
+    const za = f(fmin);
+    const zb = f(hi);
+    if (!Number.isFinite(za) || !Number.isFinite(zb)) return { ok: false, reason: 'error', message: 'Could not evaluate the reachable range' };
+    const lo = Math.min(za, zb), up = Math.max(za, zb);
     return {
-      ok: false, reason: 'below-fab', zRange: [Math.min(zLo, zHi), Math.max(zLo, zHi)],
-      message: `${fz(target)} ohm needs W ${f3(W)} mm, below the fab minimum ${f3(fmin)} mm; W from ${f3(fmin)} mm gives ${fz(Math.min(zLo, zHi))} to ${fz(Math.max(zLo, zHi))} ohm`,
+      ok: false, reason: 'below-fab', zRange: [lo, up],
+      message: `${fz(target)} ohm needs ${name} ${f3(x)} mm, below the fab minimum ${f3(fmin)} mm; ${name} from ${f3(fmin)} mm gives ${fz(lo)} to ${fz(up)} ohm`,
     };
   } catch (e) { return fail(e, req); }
+}
+
+/**
+ * Turn a findW (param 'W') or findS (param 'S') success below the fab minimum into a 'below-fab' failure carrying the
+ * Z range reachable with that dimension >= fmin (W up to 4 mm, gap up to 6 mm, the default search ranges).
+ * Other results pass through unchanged.
+ */
+export function enforceFabMin(r: SynthResult, req: AnalyzeRequest, target: number, fmin: number, param: 'W' | 'S'): SynthResult {
+  if (!r.ok || !(fmin > 0)) return r;
+  if (param === 'W') {
+    return r.W < fmin - 1e-12 ? belowFab((W) => zOf(withW(req, W)), target, r.W, fmin, 4, req) : r;
+  }
+  return r.S != null && r.S < fmin - 1e-12 ? belowFab((S) => zOf(withS(req, S)), target, r.S, fmin, 6, req, 'gap') : r;
 }
 
 /** Evaluator for compact(): a point the engine refuses is replaced by the nearest accepted one, keeping monotonicity. */

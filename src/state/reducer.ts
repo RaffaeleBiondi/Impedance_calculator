@@ -47,6 +47,40 @@ function nearestSignal(layers: Layer[], at: number): string | null {
   return pick((c) => c.role !== 'plane') ?? pick(() => true);
 }
 
+/** References that no longer sit on their side of the trace (or are gone) are reset to the defaults. */
+function checkRefs(state: AppState): Result {
+  const L = state.stackup.layers;
+  const c = state.calc;
+  const i = L.findIndex((l) => l.id === c.layerId);
+  if (i < 0) return { state };
+  const ok = (id: string | null, side: 'above' | 'below') => {
+    if (id === null) return true;
+    const j = L.findIndex((l) => l.id === id);
+    return j >= 0 && L[j].kind === 'copper' && (side === 'above' ? j < i : j > i);
+  };
+  if (ok(c.refAbove, 'above') && ok(c.refBelow, 'below')) return { state };
+  const r = defaultRefs(state.stackup, c.layerId);
+  return {
+    state: { ...state, calc: { ...c, refAbove: r.above, refBelow: r.below } },
+    notice: 'A reference is no longer on its side of the trace; references were reset to the defaults.',
+  };
+}
+
+/** The selected trace layer is a plane: move to the nearest signal/mixed layer and reset the refs, with a notice. */
+function leavePlane(state: AppState, verb: 'is' | 'is now'): Result {
+  const L = state.stackup.layers;
+  const sel = L.find((l) => l.id === state.calc.layerId);
+  if (!sel || sel.kind !== 'copper' || sel.role !== 'plane') return { state };
+  const id = nearestSignal(L, L.indexOf(sel));
+  const pick = id && id !== sel.id ? (L.find((l) => l.id === id) as CopperLayer) : null;
+  if (!pick) return { state, notice: `${sel.name} ${verb} a plane and no signal layer is left.` };
+  const r = defaultRefs(state.stackup, pick.id);
+  return {
+    state: { ...state, calc: { ...state.calc, layerId: pick.id, refAbove: r.above, refBelow: r.below } },
+    notice: `${sel.name} ${verb} a plane; selection moved to ${pick.name} and references were reset.`,
+  };
+}
+
 function withStackup(state: AppState, stackup: Stackup): AppState {
   return { ...state, stackup };
 }
@@ -78,7 +112,10 @@ export function reducer(state: AppState, a: Action): Result {
           },
         };
       }
-      return { state: next };
+      // A selected layer that is a plane, or references on the wrong side, fall back with a notice.
+      const lp = leavePlane(next, 'is');
+      if (lp.notice) return lp;
+      return checkRefs(next);
     }
 
     case 'addLayer': {
@@ -147,7 +184,7 @@ export function reducer(state: AppState, a: Action): Result {
       const j = a.dir === 'up' ? i - 1 : i + 1;
       if (i < 0 || j < 0 || j >= L.length) return { state };
       [L[i], L[j]] = [L[j], L[i]];
-      return { state: withStackup(state, { ...state.stackup, layers: L }) };
+      return checkRefs(withStackup(state, { ...state.stackup, layers: L }));
     }
 
     case 'updateLayer': {
@@ -158,6 +195,7 @@ export function reducer(state: AppState, a: Action): Result {
         const isPlane = (a.patch as Partial<CopperLayer>).role === 'plane';
         if (isPlane) tl.delete(a.id);
         next = { ...next, tableLayers: [...tl] };
+        if (isPlane && state.calc.layerId === a.id) return leavePlane(next, 'is now');
       }
       return { state: next };
     }

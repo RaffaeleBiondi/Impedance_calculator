@@ -87,3 +87,61 @@ describe('renameStackup', () => {
     expect(r.stackup.layers).toBe(s.stackup.layers);
   });
 });
+
+describe('invalid selection fallback (Task 14)', () => {
+  it('re-roling the selected layer to plane moves the selection with a notice', () => {
+    const s = base();
+    const r = reducer(s, { type: 'updateLayer', id: 'cu5', patch: { role: 'plane' } });
+    const id = r.state.calc.layerId;
+    expect(id).not.toBe('cu5');
+    const l = r.state.stackup.layers.find((x) => x.id === id)!;
+    expect(l.kind === 'copper' && l.role !== 'plane').toBe(true);
+    const d = defaultRefs(r.state.stackup, id);
+    expect(r.state.calc.refAbove).toBe(d.above);
+    expect(r.state.calc.refBelow).toBe(d.below);
+    expect(r.notice).toMatch(/plane/);
+  });
+
+  it('re-roling another layer keeps the selection and gives no notice', () => {
+    const s = base();
+    const r = reducer(s, { type: 'updateLayer', id: 'cu7', patch: { role: 'plane' } });
+    expect(r.state.calc.layerId).toBe('cu5');
+    expect(r.notice).toBeUndefined();
+  });
+
+  it('moving a layer that puts a reference on the wrong side resets the references with a notice', () => {
+    const s = base(); // cu5, refs cu4 / cu6
+    // move cu5 up twice: past d4 and then past cu4 -> cu4 ends up below the trace
+    let r = reducer(s, { type: 'moveLayer', id: 'cu5', dir: 'up' });
+    r = reducer(r.state, { type: 'moveLayer', id: 'cu5', dir: 'up' });
+    const L = r.state.stackup.layers;
+    const i = L.findIndex((l) => l.id === 'cu5');
+    const c = r.state.calc;
+    if (c.refAbove) expect(L.findIndex((l) => l.id === c.refAbove)).toBeLessThan(i);
+    if (c.refBelow) expect(L.findIndex((l) => l.id === c.refBelow)).toBeGreaterThan(i);
+    expect(r.notice).toMatch(/reference/i);
+  });
+});
+
+describe('setStackup keeps a valid selection (Task 14)', () => {
+  it('loading a stackup where the selected layer is a plane moves the selection with a notice', () => {
+    const s = base();
+    const st = structuredClone(s.stackup);
+    const l = st.layers.find((x) => x.id === 'cu5')!;
+    if (l.kind === 'copper') l.role = 'plane';
+    const r = reducer(s, { type: 'setStackup', stackup: st });
+    const id = r.state.calc.layerId;
+    const sel = r.state.stackup.layers.find((x) => x.id === id)!;
+    expect(sel.kind === 'copper' && sel.role !== 'plane').toBe(true);
+    expect(r.notice).toMatch(/plane/);
+  });
+
+  it('loading a stackup where a reference is on the wrong side resets the references with a notice', () => {
+    const s = base();
+    s.calc.refAbove = 'cu6'; // below cu5: wrong side once loaded
+    const r = reducer(s, { type: 'setStackup', stackup: structuredClone(s.stackup) });
+    const d = defaultRefs(r.state.stackup, 'cu5');
+    expect(r.state.calc.refAbove).toBe(d.above);
+    expect(r.notice).toMatch(/reference/i);
+  });
+});
