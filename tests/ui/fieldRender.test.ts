@@ -82,6 +82,33 @@ describe('renderField', () => {
     expect(texts.join(' ')).toContain('In6.Cu');
   });
 
+  it('flips B.Cu so its plane label is drawn at the top', () => {
+    const r = analyze(req('cu9', 'cu8', null, { type: 'se', W: 0.2, etch: false }));
+    expect(r.ok && r.xs.flipped).toBe(true);
+    const { ctx, texts } = fakeCtx(320, 160);
+    const tops: number[] = [];
+    (ctx as unknown as { fillText: (t: string, x: number, y: number) => void }).fillText = (t: string, _x: number, y: number) => { texts.push(t); tops.push(y); };
+    renderField(ctx, r, view({ line: { W: 0.2 }, names: { base: 'In8.Cu', cover: null } }));
+    expect(texts).toEqual(['In8.Cu']);
+    expect(tops[0]).toBeLessThan(80); // upper half of a 160 px canvas
+  });
+
+  it('draws an open cover side (embedded microstrip) and a no-reference odd pair', () => {
+    const a = analyze(req('cu2', null, 'cu3', { type: 'se', W: 0.12, etch: false }));
+    expect(a.ok && a.xs.topology).toBe('embedded-microstrip');
+    expect(a.ok && a.xs.flipped && !a.xs.baseRef && a.xs.coverRef).toBe(true); // base = core above (open), cover = In3.Cu
+    let f = fakeCtx(320, 160);
+    renderField(f.ctx, a, view({ line: { W: 0.12 }, names: { base: null, cover: 'In3.Cu' } }));
+    expect(f.calls).toContain('putImageData');
+    expect(f.texts).toEqual(['In3.Cu']);
+    const b = analyze(req('cu5', null, null, { type: 'diff', W: 0.125, S: 0.3, etch: false }));
+    expect(b.ok && b.kind === 'diff' && b.oddOnly).toBe(true);
+    f = fakeCtx(320, 160);
+    renderField(f.ctx, b, view({ line: { W: 0.125, S: 0.3 }, names: { base: null, cover: null } }));
+    expect(f.calls).toContain('putImageData');
+    expect(f.texts).toEqual([]);
+  });
+
   it('handles a trapezoidal CPWG pair on the outer layer', () => {
     const s = exampleStackup();
     s.etch.mode = 'trap';

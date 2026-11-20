@@ -122,3 +122,26 @@ describe('invalid selection fallback (Task 14)', () => {
     expect(r.notice).toMatch(/reference/i);
   });
 });
+
+describe('setStackup keeps a valid selection (Task 14)', () => {
+  it('loading a stackup where the selected layer is a plane moves the selection with a notice', () => {
+    const s = base();
+    const st = structuredClone(s.stackup);
+    const l = st.layers.find((x) => x.id === 'cu5')!;
+    if (l.kind === 'copper') l.role = 'plane';
+    const r = reducer(s, { type: 'setStackup', stackup: st });
+    const id = r.state.calc.layerId;
+    const sel = r.state.stackup.layers.find((x) => x.id === id)!;
+    expect(sel.kind === 'copper' && sel.role !== 'plane').toBe(true);
+    expect(r.notice).toMatch(/plane/);
+  });
+
+  it('loading a stackup where a reference is on the wrong side resets the references with a notice', () => {
+    const s = base();
+    s.calc.refAbove = 'cu6'; // below cu5: wrong side once loaded
+    const r = reducer(s, { type: 'setStackup', stackup: structuredClone(s.stackup) });
+    const d = defaultRefs(r.state.stackup, 'cu5');
+    expect(r.state.calc.refAbove).toBe(d.above);
+    expect(r.notice).toMatch(/reference/i);
+  });
+});

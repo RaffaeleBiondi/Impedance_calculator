@@ -72,6 +72,7 @@ export function Calculator() {
   const [busy, setBusy] = useState<string | null>(null);
   const handle = useRef<{ cancel(): void } | null>(null);
   const seq = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const set = (patch: Partial<CalcState>) => dispatch({ type: 'setCalc', patch });
   const edit = (patch: Partial<CalcState>) => { setMsg(null); set(patch); };
@@ -116,6 +117,7 @@ export function Calculator() {
   useEffect(() => {
     const r = req, c = calc;
     const t = setTimeout(() => {
+      timer.current = null;
       if (c.compact) {
         start<Synth>({ op: 'compact', req: r, target: c.target, tol: c.tol / 100, fmin: c.fmin }, 'compact…', (res) => {
           if (res.ok) {
@@ -131,6 +133,7 @@ export function Calculator() {
         start<AnalyzeResult>({ op: 'analyze', req: r }, '…', (res) => setShown({ result: res, line: lineOf(r) }));
       }
     }, DEBOUNCE_MS);
+    timer.current = t;
     return () => clearTimeout(t);
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -139,8 +142,16 @@ export function Calculator() {
   const synth = (op: 'findW' | 'findS') => {
     setMsg(null);
     const r = req, c = calc;
+    // A pending debounced analysis would cancel the search: drop it (the search uses the same inputs).
+    const hadPending = timer.current != null;
+    if (timer.current != null) { clearTimeout(timer.current); timer.current = null; }
     start<Synth>({ op, req: r, target: c.target }, 'searching…', (res) => {
-      if (!res.ok) { setMsg({ text: res.message, detail: res.detail, cls: 'bad' }); return; }
+      if (!res.ok) {
+        setMsg({ text: res.message, detail: res.detail, cls: 'bad' });
+        // The dropped analysis still has to run for the edited inputs.
+        if (hadPending) start<AnalyzeResult>({ op: 'analyze', req: r }, '…', (a) => setShown({ result: a, line: lineOf(r) }));
+        return;
+      }
       const v = op === 'findW' ? res.W : (res.S as number);
       const name = op === 'findW' ? 'W' : 'Gap';
       set(op === 'findW' ? { W: +v.toFixed(4) } : { S: +v.toFixed(4) });

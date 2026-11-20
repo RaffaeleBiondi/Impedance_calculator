@@ -66,6 +66,21 @@ function checkRefs(state: AppState): Result {
   };
 }
 
+/** The selected trace layer is a plane: move to the nearest signal/mixed layer and reset the refs, with a notice. */
+function leavePlane(state: AppState, verb: 'is' | 'is now'): Result {
+  const L = state.stackup.layers;
+  const sel = L.find((l) => l.id === state.calc.layerId);
+  if (!sel || sel.kind !== 'copper' || sel.role !== 'plane') return { state };
+  const id = nearestSignal(L, L.indexOf(sel));
+  const pick = id && id !== sel.id ? (L.find((l) => l.id === id) as CopperLayer) : null;
+  if (!pick) return { state, notice: `${sel.name} ${verb} a plane and no signal layer is left.` };
+  const r = defaultRefs(state.stackup, pick.id);
+  return {
+    state: { ...state, calc: { ...state.calc, layerId: pick.id, refAbove: r.above, refBelow: r.below } },
+    notice: `${sel.name} ${verb} a plane; selection moved to ${pick.name} and references were reset.`,
+  };
+}
+
 function withStackup(state: AppState, stackup: Stackup): AppState {
   return { ...state, stackup };
 }
@@ -97,7 +112,10 @@ export function reducer(state: AppState, a: Action): Result {
           },
         };
       }
-      return { state: next };
+      // A selected layer that is a plane, or references on the wrong side, fall back with a notice.
+      const lp = leavePlane(next, 'is');
+      if (lp.notice) return lp;
+      return checkRefs(next);
     }
 
     case 'addLayer': {
@@ -177,22 +195,7 @@ export function reducer(state: AppState, a: Action): Result {
         const isPlane = (a.patch as Partial<CopperLayer>).role === 'plane';
         if (isPlane) tl.delete(a.id);
         next = { ...next, tableLayers: [...tl] };
-        if (isPlane && state.calc.layerId === a.id) {
-          // The selected trace layer became a plane: move to the nearest signal/mixed layer.
-          const layers = next.stackup.layers;
-          const at = layers.findIndex((l) => l.id === a.id);
-          const id = nearestSignal(layers, at);
-          const pick = id && id !== a.id ? (layers.find((l) => l.id === id) as CopperLayer) : null;
-          if (pick) {
-            const r = defaultRefs(next.stackup, pick.id);
-            const old = (layers[at] as CopperLayer).name;
-            return {
-              state: { ...next, calc: { ...next.calc, layerId: pick.id, refAbove: r.above, refBelow: r.below } },
-              notice: `${old} is now a plane; selection moved to ${pick.name} and references were reset.`,
-            };
-          }
-          return { state: next, notice: `${(layers[at] as CopperLayer).name} is now a plane and no signal layer is left.` };
-        }
+        if (isPlane && state.calc.layerId === a.id) return leavePlane(next, 'is now');
       }
       return { state: next };
     }

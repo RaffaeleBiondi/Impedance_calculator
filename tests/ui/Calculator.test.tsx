@@ -118,6 +118,21 @@ describe('Calculator', () => {
     expect(screen.getByText('Longer reason')).toBeInTheDocument();
   });
 
+  it('a debounce still pending when Find W is clicked does not cancel the search', async () => {
+    mount();
+    tick(DEBOUNCE_MS + 1);
+    fireEvent.change(screen.getByLabelText('Width W'), { target: { value: '0.14' } });
+    tick(50);
+    fireEvent.click(screen.getByRole('button', { name: 'Find W' }));
+    const j = runs[runs.length - 1];
+    expect(j.job.op).toBe('findW');
+    tick(DEBOUNCE_MS + 1);
+    expect(j.cancel).not.toHaveBeenCalled();
+    const res = analyze({ ...(j.job as Extract<Job, { op: 'findW' }>).req, line: { type: 'se', W: 0.1352, etch: false }, q: 1 });
+    await act(async () => { j.resolve({ ok: true, W: 0.1352, z: 50, result: res }); });
+    expect(screen.getByLabelText('Width W')).toHaveValue('0.1352');
+  });
+
   it('L1 can be cleared back to none', () => {
     mount();
     const l1 = screen.getByLabelText('Length L1');
