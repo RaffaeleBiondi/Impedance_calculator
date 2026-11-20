@@ -35,8 +35,28 @@ export function buildAxis(
   return Float64Array.from(nodes);
 }
 
+/** Mesh node cap: a grid above this is refused rather than solved (keeps the browser responsive). */
+export const MAX_NODES = 400_000;
+
+/** Geometry the solver refuses (for example a grid above MAX_NODES). */
+export class GeometryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GeometryError';
+  }
+}
+
 export function makeGrid(p: Problem): Grid {
   const xs = buildAxis([0, p.xmax, ...p.keysX], p.fineX, p.hminX || p.hmin, p.hmaxX || p.hmax, p.growth, 1);
+  if (xs.length * 3 > MAX_NODES) throw tooLarge(xs.length * 3);
   const ys = buildAxis([0, p.ymax, ...p.keysY], p.fineY, p.hmin, p.hmaxY || p.hmax, p.growth, 2);
+  const n = xs.length * ys.length;
+  if (n > MAX_NODES) throw tooLarge(n);
   return { xs, ys };
+}
+
+function tooLarge(n: number): GeometryError {
+  return new GeometryError(
+    `Geometry too large for the solver: ${n} mesh nodes exceed the ${MAX_NODES} cap (extreme width/thickness ratio?)`,
+  );
 }
