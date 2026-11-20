@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="128" alt="LordOfTheOhms logo"></p>
+
 # LordOfTheOhms
 
 Field-solver PCB impedance calculator for any stackup, in your browser.
